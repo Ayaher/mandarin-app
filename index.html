@@ -178,7 +178,16 @@
 
         <!-- Display Options -->
         <div class="space-y-3 lg:col-span-4 border-t border-gray-100 dark:border-gray-700 pt-4 mt-2">
-             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Word Coloring -->
+                <label class="flex items-center justify-between p-2 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <span class="text-sm text-gray-700 dark:text-gray-300">Color Words</span>
+                    <div class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="input-word-color" class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                    </div>
+                </label>
+
                 <!-- Pinyin Above Hanzi (Per Char) -->
                 <label class="flex items-center justify-between p-2 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                     <span class="text-sm text-gray-700 dark:text-gray-300">Pinyin per Character</span>
@@ -466,13 +475,15 @@
                         fontStyle: localStorage.getItem('hanzi_font') || 'sans',
                         pinyinTop: localStorage.getItem('hanzi_pinyin_top') === 'true',
                         pinyinPerChar: localStorage.getItem('hanzi_pinyin_char') === 'true',
+                        wordColor: localStorage.getItem('hanzi_word_color') !== 'false', // Default true
                         charMode: localStorage.getItem('hanzi_char_mode') || 'original' // 'original', 'simplified', 'traditional'
                     },
                     currentWriter: null,
                     converters: {
                         toSimp: null,
                         toTrad: null
-                    }
+                    },
+                    segmenter: null
                 };
 
                 // DOM Elements
@@ -496,6 +507,7 @@
                     inputLatinSize: document.getElementById('input-latin-size'),
                     inputPinyinTop: document.getElementById('input-pinyin-top'),
                     inputPinyinChar: document.getElementById('input-pinyin-char'), 
+                    inputWordColor: document.getElementById('input-word-color'), // New
                     optionPinyinPlacement: document.getElementById('option-pinyin-placement'), 
                     labelHanziSize: document.getElementById('label-hanzi-size'),
                     labelLatinSize: document.getElementById('label-latin-size'),
@@ -535,6 +547,11 @@
             init() {
                 // Initialize Converters
                 this.initConverters();
+
+                // Initialize Segmenter
+                if (typeof Intl !== 'undefined' && Intl.Segmenter) {
+                    this.state.segmenter = new Intl.Segmenter('zh-CN', { granularity: 'word' });
+                }
 
                 // Initial parsing
                 this.parseCards();
@@ -589,6 +606,13 @@
                 this.elements.inputPinyinChar.addEventListener('change', (e) => {
                     this.state.settings.pinyinPerChar = e.target.checked;
                     this.updateSettingsUI(); 
+                    this.renderCard();
+                    this.saveSettings();
+                });
+
+                // Word Color Toggle
+                this.elements.inputWordColor.addEventListener('change', (e) => {
+                    this.state.settings.wordColor = e.target.checked;
                     this.renderCard();
                     this.saveSettings();
                 });
@@ -750,6 +774,7 @@
                 localStorage.setItem('hanzi_font', this.state.settings.fontStyle);
                 localStorage.setItem('hanzi_pinyin_top', this.state.settings.pinyinTop);
                 localStorage.setItem('hanzi_pinyin_char', this.state.settings.pinyinPerChar);
+                localStorage.setItem('hanzi_word_color', this.state.settings.wordColor);
                 localStorage.setItem('hanzi_char_mode', this.state.settings.charMode);
             }
 
@@ -793,6 +818,7 @@
                 this.elements.labelLatinSize.textContent = `${s.latinSize}px`;
                 this.elements.inputPinyinTop.checked = s.pinyinTop;
                 this.elements.inputPinyinChar.checked = s.pinyinPerChar;
+                this.elements.inputWordColor.checked = s.wordColor;
 
                 // Toggle visibility of standard placement option if per-char is on
                 if (s.pinyinPerChar) {
@@ -914,6 +940,7 @@
                 hanziContainer.innerHTML = ''; 
                 
                 const isPinyinPerChar = this.state.settings.pinyinPerChar;
+                const useWordColor = this.state.settings.wordColor;
 
                 // Adjust Layout Mode
                 if (isPinyinPerChar) {
@@ -936,65 +963,103 @@
                 }
 
                 if (textToRender) {
-                    const chars = textToRender.split('');
-                    
-                    chars.forEach(char => {
-                        const isHanzi = /[\u4E00-\u9FFF]/.test(char);
+                    // Segmentation logic
+                    let segments = [];
+                    if (useWordColor && this.state.segmenter) {
+                        segments = Array.from(this.state.segmenter.segment(textToRender));
+                    } else {
+                        // Fallback: treat each char as a segment if no coloring
+                        segments = textToRender.split('').map(char => ({ segment: char, isWordLike: true }));
+                    }
 
-                        if (isPinyinPerChar) {
-                            // --- PINYIN PER CHAR MODE ---
-                            
-                            // 1. Get Pinyin
-                            let pinyinStr = "&nbsp;"; 
-                            if (isHanzi && typeof pinyinPro !== 'undefined') {
-                                try {
-                                    // Use pinyin-pro library
-                                    pinyinStr = pinyinPro.pinyin(char, { toneType: 'symbol' });
-                                } catch (e) { console.error(e); }
-                            }
+                    // Define distinct colors for words
+                    const colors = [
+                        'text-gray-900 dark:text-gray-100', // Default
+                        'text-blue-600 dark:text-blue-400',
+                        'text-emerald-600 dark:text-emerald-400',
+                        'text-purple-600 dark:text-purple-400'
+                    ];
 
-                            // 2. Create Wrapper
-                            const wrapper = document.createElement('div');
-                            wrapper.className = "flex flex-col items-center justify-end group";
+                    let colorIndex = 0;
 
-                            // 3. Pinyin Element
-                            const pinyinSpan = document.createElement('span');
-                            pinyinSpan.innerHTML = pinyinStr;
-                            pinyinSpan.className = "text-center leading-none text-blue-500 dark:text-blue-400 font-medium mb-1";
-                            pinyinSpan.style.fontSize = `${Math.max(10, this.state.settings.latinSize - 2)}px`;
-
-                            // 4. Hanzi Element
-                            const hanziSpan = document.createElement('span');
-                            hanziSpan.textContent = char;
-                            
-                            if (isHanzi) {
-                                hanziSpan.className = 'hanzi-char cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors leading-none';
-                                hanziSpan.addEventListener('mouseenter', (e) => this.showStrokePopup(char, e.target));
-                                hanziSpan.addEventListener('mouseleave', () => this.hideStrokePopup());
-                            } else {
-                                hanziSpan.className = 'leading-none text-gray-800 dark:text-gray-200';
-                            }
-
-                            wrapper.appendChild(pinyinSpan);
-                            wrapper.appendChild(hanziSpan);
-                            hanziContainer.appendChild(wrapper);
-
-                        } else {
-                            // --- STANDARD MODE ---
-                            
-                            if (isHanzi) {
-                                const span = document.createElement('span');
-                                span.textContent = char;
-                                span.className = 'hanzi-char cursor-pointer hover:text-blue-500 dark:hover:text-blue-400 transition-colors inline-block'; 
-                                span.addEventListener('mouseenter', (e) => this.showStrokePopup(char, e.target));
-                                span.addEventListener('mouseleave', () => this.hideStrokePopup());
-                                hanziContainer.appendChild(span);
-                            } else {
-                                const span = document.createElement('span');
-                                span.textContent = char;
-                                hanziContainer.appendChild(span);
-                            }
+                    segments.forEach(seg => {
+                        const wordText = seg.segment;
+                        // Determine if we should increment color (is it Hanzi/Word?)
+                        // If segmenter is off, we treat everything as 'word-like' in simple loop but we don't color alternate.
+                        // If segmenter is on, we cycle colors for each new word segment.
+                        
+                        let currentColorClass = 'text-gray-900 dark:text-gray-100'; // Default
+                        
+                        if (useWordColor && this.state.segmenter) {
+                            // Check if segment contains Chinese chars to decide if it's a "word" to color
+                            // Punctuation generally shouldn't trigger color shift or get color, but let's just cycle for distinct blocks
+                             if (/[\u4E00-\u9FFF]/.test(wordText)) {
+                                currentColorClass = colors[colorIndex % colors.length];
+                                colorIndex++;
+                             } else {
+                                // Punctuation / symbols - stick to default or previous? Default looks cleaner.
+                                currentColorClass = 'text-gray-400 dark:text-gray-500';
+                             }
                         }
+
+                        // Process characters in this segment/word
+                        const chars = wordText.split('');
+                        
+                        chars.forEach(char => {
+                            const isHanzi = /[\u4E00-\u9FFF]/.test(char);
+
+                            if (isPinyinPerChar) {
+                                // --- PINYIN PER CHAR MODE ---
+                                let pinyinStr = "&nbsp;"; 
+                                if (isHanzi && typeof pinyinPro !== 'undefined') {
+                                    try {
+                                        pinyinStr = pinyinPro.pinyin(char, { toneType: 'symbol' });
+                                    } catch (e) { console.error(e); }
+                                }
+
+                                const wrapper = document.createElement('div');
+                                wrapper.className = "flex flex-col items-center justify-end group";
+
+                                const pinyinSpan = document.createElement('span');
+                                pinyinSpan.innerHTML = pinyinStr;
+                                pinyinSpan.className = "text-center leading-none text-gray-400 dark:text-gray-500 font-medium mb-1"; // Neutral color for pinyin
+                                pinyinSpan.style.fontSize = `${Math.max(10, this.state.settings.latinSize - 2)}px`;
+
+                                const hanziSpan = document.createElement('span');
+                                hanziSpan.textContent = char;
+                                
+                                if (isHanzi) {
+                                    // Use calculated color class, but add hover effect
+                                    // We must strip standard colors if we want hover to work well, or just let CSS specifity handle it
+                                    // Let's use inline class for color
+                                    hanziSpan.className = `hanzi-char cursor-pointer leading-none transition-colors hover:opacity-75 ${currentColorClass}`;
+                                    hanziSpan.addEventListener('mouseenter', (e) => this.showStrokePopup(char, e.target));
+                                    hanziSpan.addEventListener('mouseleave', () => this.hideStrokePopup());
+                                } else {
+                                    hanziSpan.className = 'leading-none text-gray-800 dark:text-gray-200';
+                                }
+
+                                wrapper.appendChild(pinyinSpan);
+                                wrapper.appendChild(hanziSpan);
+                                hanziContainer.appendChild(wrapper);
+
+                            } else {
+                                // --- STANDARD MODE ---
+                                if (isHanzi) {
+                                    const span = document.createElement('span');
+                                    span.textContent = char;
+                                    span.className = `hanzi-char cursor-pointer transition-colors inline-block hover:opacity-75 ${currentColorClass}`; 
+                                    span.addEventListener('mouseenter', (e) => this.showStrokePopup(char, e.target));
+                                    span.addEventListener('mouseleave', () => this.hideStrokePopup());
+                                    hanziContainer.appendChild(span);
+                                } else {
+                                    const span = document.createElement('span');
+                                    span.textContent = char;
+                                    span.className = 'inline-block'; // basic layout
+                                    hanziContainer.appendChild(span);
+                                }
+                            }
+                        });
                     });
                 } else {
                     hanziContainer.textContent = "No text found";
