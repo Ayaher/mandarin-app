@@ -38,6 +38,9 @@
     <!-- Hanzi Writer -->
     <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
 
+    <!-- Pinyin Pro (For fetching Pinyin) -->
+    <script src="https://unpkg.com/pinyin-pro@3.19.3/dist/index.js"></script>
+
     <style>
         /* Custom Scrollbar */
         ::-webkit-scrollbar {
@@ -117,7 +120,7 @@
     </header>
 
     <!-- Settings Panel -->
-    <div id="settings-panel" class="hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-6 grid grid-cols-1 md:grid-cols-3 gap-6 shadow-md relative z-40">
+    <div id="settings-panel" class="hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 shadow-md relative z-40">
         <!-- Hanzi Size -->
         <div class="space-y-3">
             <label class="text-sm font-medium text-gray-500 dark:text-gray-400 flex items-center justify-between">
@@ -147,6 +150,29 @@
                     Serif (宋体)
                 </button>
             </div>
+        </div>
+
+        <!-- Display Options -->
+        <div class="space-y-3">
+            <label class="text-sm font-medium text-gray-500 dark:text-gray-400">Pinyin Display</label>
+            
+            <!-- Pinyin Above Hanzi (Per Char) -->
+            <label class="flex items-center justify-between p-2 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors mb-2">
+                <span class="text-sm text-gray-700 dark:text-gray-300">Pinyin per Character</span>
+                <div class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="input-pinyin-char" class="sr-only peer">
+                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                </div>
+            </label>
+
+            <!-- Pinyin Placement (Sentence Level) - Only visible if Per Char is OFF -->
+            <label id="option-pinyin-placement" class="flex items-center justify-between p-2 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                <span class="text-sm text-gray-700 dark:text-gray-300">Full Sentence Top</span>
+                <div class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="input-pinyin-top" class="sr-only peer">
+                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                </div>
+            </label>
         </div>
     </div>
 
@@ -201,10 +227,15 @@
 
                 <!-- Card Content -->
                 <div id="card-content" class="p-8 md:p-12 space-y-8 flex-1 overflow-y-auto">
-                    <!-- Hanzi -->
-                    <div class="text-center space-y-4">
-                        <p id="card-hanzi" class="text-gray-900 dark:text-white transition-all duration-200 break-words leading-tight"></p>
-                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">Hover over a character to see stroke order</p>
+                    <!-- Hanzi Area -->
+                    <div class="text-center space-y-2">
+                         <!-- Top Pinyin Placeholder (Sentence Level) -->
+                        <p id="card-pinyin-top" class="hidden text-blue-600 dark:text-blue-400 font-medium leading-relaxed mb-1 transition-all"></p>
+                        
+                        <!-- Main Hanzi Container: Can be standard flow OR flex grid based on settings -->
+                        <div id="card-hanzi" class="text-gray-900 dark:text-white transition-all duration-200 break-words leading-tight flex justify-center"></div>
+
+                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-4">Hover over a character to see stroke order</p>
                     </div>
 
                     <!-- Divider -->
@@ -334,9 +365,11 @@
                     showSettings: false,
                     darkMode: localStorage.getItem('hanzi_theme') === 'dark',
                     settings: {
-                        hanziSize: parseInt(localStorage.getItem('hanzi_size_h')) || 54, // Default 3x Latin
+                        hanziSize: parseInt(localStorage.getItem('hanzi_size_h')) || 54,
                         latinSize: parseInt(localStorage.getItem('hanzi_size_l')) || 18,
-                        fontStyle: localStorage.getItem('hanzi_font') || 'sans' // 'sans' or 'serif'
+                        fontStyle: localStorage.getItem('hanzi_font') || 'sans',
+                        pinyinTop: localStorage.getItem('hanzi_pinyin_top') === 'true',
+                        pinyinPerChar: localStorage.getItem('hanzi_pinyin_char') === 'true' // New setting
                     },
                     currentWriter: null
                 };
@@ -355,10 +388,15 @@
                     btnFontSerif: document.getElementById('btn-font-serif'),
                     inputHanziSize: document.getElementById('input-hanzi-size'),
                     inputLatinSize: document.getElementById('input-latin-size'),
+                    inputPinyinTop: document.getElementById('input-pinyin-top'),
+                    inputPinyinChar: document.getElementById('input-pinyin-char'), // New
+                    optionPinyinPlacement: document.getElementById('option-pinyin-placement'), // For visibility toggle
                     labelHanziSize: document.getElementById('label-hanzi-size'),
                     labelLatinSize: document.getElementById('label-latin-size'),
                     cardHanzi: document.getElementById('card-hanzi'),
+                    cardPinyinTop: document.getElementById('card-pinyin-top'),
                     cardPinyin: document.getElementById('card-pinyin'),
+                    blockPinyin: document.getElementById('block-pinyin'),
                     cardTranslation: document.getElementById('card-translation'),
                     blockExtras: document.getElementById('block-extras'),
                     progressFill: document.getElementById('progress-fill'),
@@ -410,6 +448,21 @@
                 this.elements.inputLatinSize.addEventListener('input', (e) => {
                     this.state.settings.latinSize = parseInt(e.target.value);
                     this.updateSettingsUI();
+                    this.saveSettings();
+                });
+
+                // Pinyin Top Toggle (Sentence Level)
+                this.elements.inputPinyinTop.addEventListener('change', (e) => {
+                    this.state.settings.pinyinTop = e.target.checked;
+                    this.renderCard();
+                    this.saveSettings();
+                });
+
+                // Pinyin Per Char Toggle
+                this.elements.inputPinyinChar.addEventListener('change', (e) => {
+                    this.state.settings.pinyinPerChar = e.target.checked;
+                    this.updateSettingsUI(); // Toggle visibility of other pinyin option
+                    this.renderCard();
                     this.saveSettings();
                 });
 
@@ -508,10 +561,9 @@
                 this.state.mode = mode;
                 this.updateModeUI();
                 
-                // If switching to view, ensure parsing is fresh and we reset index if needed (optional)
                 if (mode === 'view') {
                     this.parseCards();
-                    this.elements.settingsPanel.classList.add('hidden'); // auto hide settings on view switch
+                    this.elements.settingsPanel.classList.add('hidden');
                     this.state.showSettings = false;
                     this.elements.btnSettings.classList.remove('bg-blue-100', 'text-blue-600');
                 }
@@ -527,12 +579,13 @@
                 localStorage.setItem('hanzi_size_h', this.state.settings.hanziSize);
                 localStorage.setItem('hanzi_size_l', this.state.settings.latinSize);
                 localStorage.setItem('hanzi_font', this.state.settings.fontStyle);
+                localStorage.setItem('hanzi_pinyin_top', this.state.settings.pinyinTop);
+                localStorage.setItem('hanzi_pinyin_char', this.state.settings.pinyinPerChar);
             }
 
             updateModeUI() {
                 const isView = this.state.mode === 'view';
                 
-                // Toggle Container Visibility
                 if (isView) {
                     this.elements.viewInput.classList.add('hidden');
                     this.elements.viewStudy.classList.remove('hidden');
@@ -541,7 +594,6 @@
                     this.elements.viewStudy.classList.add('hidden');
                 }
 
-                // Update Button Styles (Desktop)
                 const activeClass = ['bg-white', 'dark:bg-gray-700', 'text-blue-600', 'dark:text-blue-300', 'shadow-sm'];
                 const inactiveClass = ['text-gray-600', 'dark:text-gray-400', 'hover:text-gray-900'];
 
@@ -557,7 +609,6 @@
                     this.elements.btnModeView.classList.add(...inactiveClass);
                 }
 
-                // Mobile Icon
                 const mobileIcon = document.getElementById('icon-mode-mobile');
                 mobileIcon.setAttribute('data-lucide', isView ? 'edit-3' : 'book-open');
                 lucide.createIcons();
@@ -566,11 +617,19 @@
             updateSettingsUI() {
                 const s = this.state.settings;
                 
-                // Update Inputs
                 this.elements.inputHanziSize.value = s.hanziSize;
                 this.elements.inputLatinSize.value = s.latinSize;
                 this.elements.labelHanziSize.textContent = `${s.hanziSize}px`;
                 this.elements.labelLatinSize.textContent = `${s.latinSize}px`;
+                this.elements.inputPinyinTop.checked = s.pinyinTop;
+                this.elements.inputPinyinChar.checked = s.pinyinPerChar;
+
+                // Toggle visibility of standard placement option if per-char is on
+                if (s.pinyinPerChar) {
+                    this.elements.optionPinyinPlacement.classList.add('opacity-50', 'pointer-events-none');
+                } else {
+                    this.elements.optionPinyinPlacement.classList.remove('opacity-50', 'pointer-events-none');
+                }
 
                 // Update Font Style Buttons
                 const activeBtn = ['border-blue-500', 'bg-blue-50', 'text-blue-700', 'dark:bg-blue-900/30', 'dark:text-blue-300', 'dark:border-blue-700'];
@@ -588,59 +647,50 @@
                     this.elements.btnFontSans.classList.add(...inactiveBtn);
                 }
 
-                // Apply Styles to Content
+                // Apply Styles
+                // Note: when Pinyin-per-char is on, we update specific classes in renderCard, 
+                // but basic props update here
                 this.elements.cardHanzi.style.fontSize = `${s.hanziSize}px`;
                 this.elements.cardHanzi.style.fontFamily = s.fontStyle === 'serif' ? '"Noto Serif SC", serif' : '"Noto Sans SC", sans-serif';
                 
-                this.elements.cardPinyin.style.fontSize = `${s.latinSize + 2}px`;
+                const pinyinSize = `${s.latinSize + 2}px`;
+                this.elements.cardPinyin.style.fontSize = pinyinSize;
+                this.elements.cardPinyinTop.style.fontSize = pinyinSize;
+                
                 this.elements.cardTranslation.style.fontSize = `${s.latinSize}px`;
                 this.elements.blockExtras.style.fontSize = `${s.latinSize - 2}px`;
             }
-
-            // --- Stroke Order Logic ---
 
             showStrokePopup(char, targetElement) {
                 const popup = this.elements.strokePopup;
                 const container = this.elements.strokeTarget;
                 const loader = this.elements.strokeLoading;
                 
-                // Reset content
                 container.innerHTML = '';
                 loader.classList.remove('hidden');
                 popup.classList.remove('hidden');
 
-                // Position Popup
                 const rect = targetElement.getBoundingClientRect();
                 const popupWidth = 120;
                 const popupHeight = 120;
                 
-                // Default: centered above
                 let top = rect.top - popupHeight - 10;
                 let left = rect.left + (rect.width / 2) - (popupWidth / 2);
 
-                // If goes off top, put below
-                if (top < 10) {
-                    top = rect.bottom + 10;
-                }
-                
-                // If off right
-                if (left + popupWidth > window.innerWidth) {
-                    left = window.innerWidth - popupWidth - 10;
-                }
-                // If off left
+                if (top < 10) top = rect.bottom + 10;
+                if (left + popupWidth > window.innerWidth) left = window.innerWidth - popupWidth - 10;
                 if (left < 10) left = 10;
 
                 popup.style.top = `${top}px`;
                 popup.style.left = `${left}px`;
 
-                // Init Hanzi Writer
                 try {
                     this.state.currentWriter = HanziWriter.create('stroke-target', char, {
                         width: 100,
                         height: 100,
                         padding: 5,
-                        strokeColor: this.state.darkMode ? '#60a5fa' : '#2563eb', // blue-400 : blue-600
-                        outlineColor: this.state.darkMode ? '#374151' : '#e5e7eb', // gray-700 : gray-200
+                        strokeColor: this.state.darkMode ? '#60a5fa' : '#2563eb',
+                        outlineColor: this.state.darkMode ? '#374151' : '#e5e7eb',
                         delayBetweenStrokes: 200,
                         onLoadCharDataSuccess: () => {
                             loader.classList.add('hidden');
@@ -658,8 +708,6 @@
 
             hideStrokePopup() {
                 this.elements.strokePopup.classList.add('hidden');
-                // Cleanup isn't strictly necessary for HanziWriter DOM wise as we clear innerHTML next time,
-                // but nice to have if we wanted to cancel animation.
             }
 
             renderCard() {
@@ -676,40 +724,109 @@
                 this.elements.cardContent.classList.remove('hidden');
 
                 const card = this.state.cards[this.state.currentIndex];
-
-                // Render Hanzi with interactive spans
+                const pinyinText = card.pinyin || "";
                 const hanziContainer = this.elements.cardHanzi;
-                hanziContainer.innerHTML = ''; // Clear prev
                 
+                hanziContainer.innerHTML = ''; 
+                
+                const isPinyinPerChar = this.state.settings.pinyinPerChar;
+
+                // Adjust Layout Mode
+                if (isPinyinPerChar) {
+                    hanziContainer.classList.remove('block');
+                    hanziContainer.classList.add('flex', 'flex-wrap', 'gap-y-4', 'gap-x-1', 'justify-center', 'items-end');
+                } else {
+                    hanziContainer.classList.remove('flex', 'flex-wrap', 'gap-y-4', 'gap-x-1', 'justify-center', 'items-end');
+                    hanziContainer.classList.add('block');
+                }
+
                 if (card.hanzi) {
                     const chars = card.hanzi.split('');
+                    
                     chars.forEach(char => {
-                        // Check if CJK Unified Ideograph
-                        if (/[\u4E00-\u9FFF]/.test(char)) {
-                            const span = document.createElement('span');
-                            span.textContent = char;
-                            span.className = 'hanzi-char cursor-pointer hover:text-blue-500 dark:hover:text-blue-400 transition-colors inline-block'; // inline-block helps with layout
+                        const isHanzi = /[\u4E00-\u9FFF]/.test(char);
+
+                        if (isPinyinPerChar) {
+                            // --- PINYIN PER CHAR MODE ---
                             
-                            // Mouse Events
-                            span.addEventListener('mouseenter', (e) => this.showStrokePopup(char, e.target));
-                            span.addEventListener('mouseleave', () => this.hideStrokePopup());
+                            // 1. Get Pinyin
+                            let pinyinStr = "&nbsp;"; // Default empty placeholder to maintain height
+                            if (isHanzi && typeof pinyinPro !== 'undefined') {
+                                try {
+                                    // Use pinyin-pro library
+                                    pinyinStr = pinyinPro.pinyin(char, { toneType: 'symbol' });
+                                } catch (e) { console.error(e); }
+                            }
+
+                            // 2. Create Wrapper (Vertical Stack)
+                            const wrapper = document.createElement('div');
+                            wrapper.className = "flex flex-col items-center justify-end group";
+
+                            // 3. Pinyin Element (Top)
+                            const pinyinSpan = document.createElement('span');
+                            pinyinSpan.innerHTML = pinyinStr;
+                            pinyinSpan.className = "text-center leading-none text-blue-500 dark:text-blue-400 font-medium mb-1";
+                            // Dynamically set pinyin font size based on Latin slider, slightly smaller
+                            pinyinSpan.style.fontSize = `${Math.max(10, this.state.settings.latinSize - 2)}px`;
+
+                            // 4. Hanzi Element (Bottom)
+                            const hanziSpan = document.createElement('span');
+                            hanziSpan.textContent = char;
                             
-                            hanziContainer.appendChild(span);
+                            if (isHanzi) {
+                                hanziSpan.className = 'hanzi-char cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors leading-none';
+                                hanziSpan.addEventListener('mouseenter', (e) => this.showStrokePopup(char, e.target));
+                                hanziSpan.addEventListener('mouseleave', () => this.hideStrokePopup());
+                            } else {
+                                hanziSpan.className = 'leading-none text-gray-800 dark:text-gray-200';
+                            }
+
+                            wrapper.appendChild(pinyinSpan);
+                            wrapper.appendChild(hanziSpan);
+                            hanziContainer.appendChild(wrapper);
+
                         } else {
-                            // Non-Hanzi (punctuation, etc)
-                            const span = document.createElement('span');
-                            span.textContent = char;
-                            hanziContainer.appendChild(span);
+                            // --- STANDARD MODE ---
+                            
+                            if (isHanzi) {
+                                const span = document.createElement('span');
+                                span.textContent = char;
+                                span.className = 'hanzi-char cursor-pointer hover:text-blue-500 dark:hover:text-blue-400 transition-colors inline-block'; 
+                                span.addEventListener('mouseenter', (e) => this.showStrokePopup(char, e.target));
+                                span.addEventListener('mouseleave', () => this.hideStrokePopup());
+                                hanziContainer.appendChild(span);
+                            } else {
+                                const span = document.createElement('span');
+                                span.textContent = char;
+                                hanziContainer.appendChild(span);
+                            }
                         }
                     });
                 } else {
                     hanziContainer.textContent = "No text found";
                 }
 
-                this.elements.cardPinyin.textContent = card.pinyin || "";
+                // Handle Sentence-Level Pinyin Visibility
+                // If Pinyin-Per-Char is ON, we hide all sentence-level Pinyin blocks
+                if (isPinyinPerChar) {
+                    this.elements.cardPinyinTop.classList.add('hidden');
+                    this.elements.blockPinyin.classList.add('hidden');
+                } else {
+                    // Standard Logic
+                    if (this.state.settings.pinyinTop) {
+                        this.elements.cardPinyinTop.textContent = pinyinText;
+                        this.elements.cardPinyinTop.classList.remove('hidden');
+                        this.elements.blockPinyin.classList.add('hidden');
+                    } else {
+                        this.elements.cardPinyinTop.classList.add('hidden');
+                        this.elements.blockPinyin.classList.remove('hidden');
+                        this.elements.cardPinyin.textContent = pinyinText;
+                    }
+                }
+
                 this.elements.cardTranslation.textContent = card.translation || "";
 
-                // Render Extras (HTML)
+                // Render Extras
                 if (card.extras && card.extras.length > 0) {
                     this.elements.blockExtras.classList.remove('hidden');
                     this.elements.blockExtras.innerHTML = card.extras.map(line => {
@@ -757,7 +874,6 @@
             }
         }
 
-        // Init App
         const app = new HanziApp();
     </script>
 </body>
