@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hanzi Markdown Visualizer</title>
+    <title>Mandarin Study Visualizer</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -40,6 +40,9 @@
 
     <!-- Pinyin Pro (For fetching Pinyin) -->
     <script src="https://unpkg.com/pinyin-pro@3.19.3/dist/index.js"></script>
+    
+    <!-- OpenCC JS (For Simplified/Traditional Conversion) -->
+    <script src="https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js"></script>
 
     <style>
         /* Custom Scrollbar */
@@ -86,7 +89,7 @@
                 文
             </div>
             <div>
-                <h1 class="font-bold text-lg leading-tight">Hanzi Study</h1>
+                <h1 class="font-bold text-lg leading-tight">Mandarin Study</h1>
                 <p class="text-xs text-gray-500 dark:text-gray-400">Markdown Visualizer</p>
             </div>
         </div>
@@ -112,6 +115,11 @@
                 <i id="icon-theme" data-lucide="moon" class="w-5 h-5"></i>
             </button>
             
+            <!-- About Toggle -->
+            <button id="btn-about" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 transition-colors" onclick="app.toggleAbout()">
+                <i data-lucide="info" class="w-5 h-5"></i>
+            </button>
+
             <!-- Settings Toggle -->
             <button id="btn-settings" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 transition-colors" onclick="app.toggleSettings()">
                 <i data-lucide="settings" class="w-5 h-5"></i>
@@ -152,27 +160,43 @@
             </div>
         </div>
 
-        <!-- Display Options -->
+        <!-- Character Mode -->
         <div class="space-y-3">
-            <label class="text-sm font-medium text-gray-500 dark:text-gray-400">Pinyin Display</label>
-            
-            <!-- Pinyin Above Hanzi (Per Char) -->
-            <label class="flex items-center justify-between p-2 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors mb-2">
-                <span class="text-sm text-gray-700 dark:text-gray-300">Pinyin per Character</span>
-                <div class="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" id="input-pinyin-char" class="sr-only peer">
-                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-                </div>
-            </label>
+            <label class="text-sm font-medium text-gray-500 dark:text-gray-400">Character Mode</label>
+            <div class="flex gap-2">
+                <button id="btn-char-orig" class="flex-1 py-2 px-1 rounded-md text-xs border truncate" onclick="app.setCharMode('original')">
+                    Original
+                </button>
+                <button id="btn-char-simp" class="flex-1 py-2 px-1 rounded-md text-xs border truncate" onclick="app.setCharMode('simplified')">
+                    Simplified
+                </button>
+                <button id="btn-char-trad" class="flex-1 py-2 px-1 rounded-md text-xs border truncate" onclick="app.setCharMode('traditional')">
+                    Traditional
+                </button>
+            </div>
+        </div>
 
-            <!-- Pinyin Placement (Sentence Level) - Only visible if Per Char is OFF -->
-            <label id="option-pinyin-placement" class="flex items-center justify-between p-2 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                <span class="text-sm text-gray-700 dark:text-gray-300">Full Sentence Top</span>
-                <div class="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" id="input-pinyin-top" class="sr-only peer">
-                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-                </div>
-            </label>
+        <!-- Display Options -->
+        <div class="space-y-3 lg:col-span-4 border-t border-gray-100 dark:border-gray-700 pt-4 mt-2">
+             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Pinyin Above Hanzi (Per Char) -->
+                <label class="flex items-center justify-between p-2 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <span class="text-sm text-gray-700 dark:text-gray-300">Pinyin per Character</span>
+                    <div class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="input-pinyin-char" class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                    </div>
+                </label>
+
+                <!-- Pinyin Placement (Sentence Level) - Only visible if Per Char is OFF -->
+                <label id="option-pinyin-placement" class="flex items-center justify-between p-2 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <span class="text-sm text-gray-700 dark:text-gray-300">Full Sentence Top</span>
+                    <div class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="input-pinyin-top" class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                    </div>
+                </label>
+            </div>
         </div>
     </div>
 
@@ -181,6 +205,76 @@
         <div id="stroke-target" class="w-[100px] h-[100px]"></div>
         <div id="stroke-loading" class="absolute inset-0 flex items-center justify-center text-blue-500">
             <i data-lucide="loader-2" class="w-6 h-6 animate-spin"></i>
+        </div>
+    </div>
+
+    <!-- About Modal -->
+    <div id="about-modal" class="fixed inset-0 z-[100] hidden">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity" onclick="app.toggleAbout()"></div>
+        
+        <!-- Content -->
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700 transform transition-all p-0">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white">About</h3>
+                <button onclick="app.toggleAbout()" class="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <i data-lucide="x" class="w-5 h-5 text-gray-500"></i>
+                </button>
+            </div>
+
+            <!-- Tabs -->
+            <div class="flex border-b border-gray-100 dark:border-gray-700">
+                <button id="tab-about-app" class="flex-1 py-3 text-sm font-medium border-b-2 border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10" onclick="app.setAboutTab('app')">
+                    Info
+                </button>
+                <button id="tab-about-credits" class="flex-1 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200" onclick="app.setAboutTab('credits')">
+                    Credits
+                </button>
+            </div>
+
+            <!-- Body -->
+            <div class="p-6">
+                <!-- App Info -->
+                <div id="content-about-app" class="space-y-4">
+                    <div class="flex flex-col items-center justify-center text-center space-y-3 py-4">
+                        <div class="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white font-serif font-bold text-4xl shadow-xl shadow-blue-600/20 mb-2">
+                            文
+                        </div>
+                        <h2 class="text-xl font-bold text-gray-900 dark:text-white">Mandarin Study</h2>
+                        <p class="text-gray-600 dark:text-gray-300 leading-relaxed">
+                            A simple, distraction-free tool to visualize, practice, and understand Mandarin Chinese text structure.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Credits -->
+                <div id="content-about-credits" class="hidden space-y-4">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider font-semibold mb-3">Powered by Open Source</p>
+                    <div class="space-y-3 text-sm">
+                        <a href="https://hanziwriter.org/" target="_blank" class="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group">
+                            <span class="font-medium text-gray-700 dark:text-gray-200">Hanzi Writer</span>
+                            <i data-lucide="external-link" class="w-4 h-4 text-gray-400 group-hover:text-blue-500"></i>
+                        </a>
+                        <a href="https://github.com/zh-lx/pinyin-pro" target="_blank" class="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group">
+                            <span class="font-medium text-gray-700 dark:text-gray-200">Pinyin Pro</span>
+                            <i data-lucide="external-link" class="w-4 h-4 text-gray-400 group-hover:text-blue-500"></i>
+                        </a>
+                        <a href="https://github.com/nk2028/opencc-js" target="_blank" class="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group">
+                            <span class="font-medium text-gray-700 dark:text-gray-200">OpenCC JS</span>
+                            <i data-lucide="external-link" class="w-4 h-4 text-gray-400 group-hover:text-blue-500"></i>
+                        </a>
+                        <a href="https://tailwindcss.com/" target="_blank" class="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group">
+                            <span class="font-medium text-gray-700 dark:text-gray-200">Tailwind CSS</span>
+                            <i data-lucide="external-link" class="w-4 h-4 text-gray-400 group-hover:text-blue-500"></i>
+                        </a>
+                        <a href="https://lucide.dev/" target="_blank" class="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group">
+                            <span class="font-medium text-gray-700 dark:text-gray-200">Lucide Icons</span>
+                            <i data-lucide="external-link" class="w-4 h-4 text-gray-400 group-hover:text-blue-500"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -363,15 +457,22 @@
                     cards: [],
                     currentIndex: 0,
                     showSettings: false,
+                    showAbout: false,
+                    aboutTab: 'app', // 'app' | 'credits'
                     darkMode: localStorage.getItem('hanzi_theme') === 'dark',
                     settings: {
                         hanziSize: parseInt(localStorage.getItem('hanzi_size_h')) || 54,
                         latinSize: parseInt(localStorage.getItem('hanzi_size_l')) || 18,
                         fontStyle: localStorage.getItem('hanzi_font') || 'sans',
                         pinyinTop: localStorage.getItem('hanzi_pinyin_top') === 'true',
-                        pinyinPerChar: localStorage.getItem('hanzi_pinyin_char') === 'true' // New setting
+                        pinyinPerChar: localStorage.getItem('hanzi_pinyin_char') === 'true',
+                        charMode: localStorage.getItem('hanzi_char_mode') || 'original' // 'original', 'simplified', 'traditional'
                     },
-                    currentWriter: null
+                    currentWriter: null,
+                    converters: {
+                        toSimp: null,
+                        toTrad: null
+                    }
                 };
 
                 // DOM Elements
@@ -386,11 +487,16 @@
                     btnModeInput: document.getElementById('btn-mode-input'),
                     btnFontSans: document.getElementById('btn-font-sans'),
                     btnFontSerif: document.getElementById('btn-font-serif'),
+                    // Char Mode Buttons
+                    btnCharOrig: document.getElementById('btn-char-orig'),
+                    btnCharSimp: document.getElementById('btn-char-simp'),
+                    btnCharTrad: document.getElementById('btn-char-trad'),
+                    
                     inputHanziSize: document.getElementById('input-hanzi-size'),
                     inputLatinSize: document.getElementById('input-latin-size'),
                     inputPinyinTop: document.getElementById('input-pinyin-top'),
-                    inputPinyinChar: document.getElementById('input-pinyin-char'), // New
-                    optionPinyinPlacement: document.getElementById('option-pinyin-placement'), // For visibility toggle
+                    inputPinyinChar: document.getElementById('input-pinyin-char'), 
+                    optionPinyinPlacement: document.getElementById('option-pinyin-placement'), 
                     labelHanziSize: document.getElementById('label-hanzi-size'),
                     labelLatinSize: document.getElementById('label-latin-size'),
                     cardHanzi: document.getElementById('card-hanzi'),
@@ -409,6 +515,14 @@
                     cardContent: document.getElementById('card-content'),
                     iconTheme: document.getElementById('icon-theme'),
                     
+                    // About Elements
+                    btnAbout: document.getElementById('btn-about'),
+                    aboutModal: document.getElementById('about-modal'),
+                    tabAboutApp: document.getElementById('tab-about-app'),
+                    tabAboutCredits: document.getElementById('tab-about-credits'),
+                    contentAboutApp: document.getElementById('content-about-app'),
+                    contentAboutCredits: document.getElementById('content-about-credits'),
+                    
                     // Popup Elements
                     strokePopup: document.getElementById('stroke-popup'),
                     strokeTarget: document.getElementById('stroke-target'),
@@ -419,6 +533,9 @@
             }
 
             init() {
+                // Initialize Converters
+                this.initConverters();
+
                 // Initial parsing
                 this.parseCards();
                 
@@ -435,6 +552,16 @@
                 
                 // Initialize Icons
                 lucide.createIcons();
+            }
+
+            initConverters() {
+                if (typeof OpenCC !== 'undefined') {
+                    // We assume input could be anything, so we use broad converters
+                    // hk -> cn handles TW/HK Traditional to Simplified
+                    this.state.converters.toSimp = OpenCC.Converter({ from: 'hk', to: 'cn' });
+                    // cn -> hk handles Simplified to Traditional (HK standard is widely readable)
+                    this.state.converters.toTrad = OpenCC.Converter({ from: 'cn', to: 'hk' });
+                }
             }
 
             setupEventListeners() {
@@ -461,7 +588,7 @@
                 // Pinyin Per Char Toggle
                 this.elements.inputPinyinChar.addEventListener('change', (e) => {
                     this.state.settings.pinyinPerChar = e.target.checked;
-                    this.updateSettingsUI(); // Toggle visibility of other pinyin option
+                    this.updateSettingsUI(); 
                     this.renderCard();
                     this.saveSettings();
                 });
@@ -520,12 +647,11 @@
                     return { hanzi, pinyin, translation, extras };
                 });
 
-                // Adjust index if out of bounds after edit
                 if (this.state.currentIndex >= this.state.cards.length) {
                     this.state.currentIndex = Math.max(0, this.state.cards.length - 1);
                 }
                 
-                this.renderCard(); // Re-render if looking at study view
+                this.renderCard(); 
             }
 
             toggleTheme() {
@@ -553,6 +679,42 @@
                 }
             }
 
+            toggleAbout() {
+                this.state.showAbout = !this.state.showAbout;
+                if (this.state.showAbout) {
+                    this.elements.aboutModal.classList.remove('hidden');
+                    this.elements.btnAbout.classList.add('bg-blue-100', 'text-blue-600', 'dark:bg-blue-900', 'dark:text-blue-300');
+                } else {
+                    this.elements.aboutModal.classList.add('hidden');
+                    this.elements.btnAbout.classList.remove('bg-blue-100', 'text-blue-600', 'dark:bg-blue-900', 'dark:text-blue-300');
+                }
+            }
+
+            setAboutTab(tab) {
+                this.state.aboutTab = tab;
+                
+                const activeTabClass = ['border-b-2', 'border-blue-600', 'text-blue-600', 'dark:text-blue-400', 'bg-blue-50/50', 'dark:bg-blue-900/10'];
+                const inactiveTabClass = ['border-b-2', 'border-transparent', 'text-gray-500', 'hover:text-gray-700', 'dark:text-gray-400', 'dark:hover:text-gray-200', 'bg-transparent'];
+
+                if (tab === 'app') {
+                    this.elements.tabAboutApp.classList.add(...activeTabClass);
+                    this.elements.tabAboutApp.classList.remove(...inactiveTabClass.filter(c => c!=='border-b-2')); // keep shared structure
+                    this.elements.tabAboutCredits.classList.remove(...activeTabClass);
+                    this.elements.tabAboutCredits.classList.add(...inactiveTabClass);
+
+                    this.elements.contentAboutApp.classList.remove('hidden');
+                    this.elements.contentAboutCredits.classList.add('hidden');
+                } else {
+                    this.elements.tabAboutCredits.classList.add(...activeTabClass);
+                    this.elements.tabAboutCredits.classList.remove(...inactiveTabClass.filter(c => c!=='border-b-2'));
+                    this.elements.tabAboutApp.classList.remove(...activeTabClass);
+                    this.elements.tabAboutApp.classList.add(...inactiveTabClass);
+
+                    this.elements.contentAboutCredits.classList.remove('hidden');
+                    this.elements.contentAboutApp.classList.add('hidden');
+                }
+            }
+
             toggleMode() {
                 this.setMode(this.state.mode === 'view' ? 'input' : 'view');
             }
@@ -575,12 +737,20 @@
                 this.saveSettings();
             }
 
+            setCharMode(mode) {
+                this.state.settings.charMode = mode;
+                this.updateSettingsUI();
+                this.renderCard(); // Re-render to apply conversion
+                this.saveSettings();
+            }
+
             saveSettings() {
                 localStorage.setItem('hanzi_size_h', this.state.settings.hanziSize);
                 localStorage.setItem('hanzi_size_l', this.state.settings.latinSize);
                 localStorage.setItem('hanzi_font', this.state.settings.fontStyle);
                 localStorage.setItem('hanzi_pinyin_top', this.state.settings.pinyinTop);
                 localStorage.setItem('hanzi_pinyin_char', this.state.settings.pinyinPerChar);
+                localStorage.setItem('hanzi_char_mode', this.state.settings.charMode);
             }
 
             updateModeUI() {
@@ -635,6 +805,7 @@
                 const activeBtn = ['border-blue-500', 'bg-blue-50', 'text-blue-700', 'dark:bg-blue-900/30', 'dark:text-blue-300', 'dark:border-blue-700'];
                 const inactiveBtn = ['border-gray-200', 'dark:border-gray-700', 'text-gray-600', 'dark:text-gray-300'];
 
+                // Font Style
                 if (s.fontStyle === 'sans') {
                     this.elements.btnFontSans.classList.add(...activeBtn);
                     this.elements.btnFontSans.classList.remove(...inactiveBtn);
@@ -647,9 +818,22 @@
                     this.elements.btnFontSans.classList.add(...inactiveBtn);
                 }
 
+                // Character Mode
+                const modes = ['original', 'simplified', 'traditional'];
+                const btnIds = ['btnCharOrig', 'btnCharSimp', 'btnCharTrad'];
+                
+                modes.forEach((m, idx) => {
+                    const btn = this.elements[btnIds[idx]];
+                    if (s.charMode === m) {
+                        btn.classList.add(...activeBtn);
+                        btn.classList.remove(...inactiveBtn);
+                    } else {
+                        btn.classList.remove(...activeBtn);
+                        btn.classList.add(...inactiveBtn);
+                    }
+                });
+
                 // Apply Styles
-                // Note: when Pinyin-per-char is on, we update specific classes in renderCard, 
-                // but basic props update here
                 this.elements.cardHanzi.style.fontSize = `${s.hanziSize}px`;
                 this.elements.cardHanzi.style.fontFamily = s.fontStyle === 'serif' ? '"Noto Serif SC", serif' : '"Noto Sans SC", sans-serif';
                 
@@ -740,8 +924,19 @@
                     hanziContainer.classList.add('block');
                 }
 
-                if (card.hanzi) {
-                    const chars = card.hanzi.split('');
+                let textToRender = card.hanzi || "";
+
+                // --- CONVERSION LOGIC ---
+                if (textToRender && this.state.settings.charMode !== 'original') {
+                    if (this.state.settings.charMode === 'simplified' && this.state.converters.toSimp) {
+                        textToRender = this.state.converters.toSimp(textToRender);
+                    } else if (this.state.settings.charMode === 'traditional' && this.state.converters.toTrad) {
+                        textToRender = this.state.converters.toTrad(textToRender);
+                    }
+                }
+
+                if (textToRender) {
+                    const chars = textToRender.split('');
                     
                     chars.forEach(char => {
                         const isHanzi = /[\u4E00-\u9FFF]/.test(char);
@@ -750,7 +945,7 @@
                             // --- PINYIN PER CHAR MODE ---
                             
                             // 1. Get Pinyin
-                            let pinyinStr = "&nbsp;"; // Default empty placeholder to maintain height
+                            let pinyinStr = "&nbsp;"; 
                             if (isHanzi && typeof pinyinPro !== 'undefined') {
                                 try {
                                     // Use pinyin-pro library
@@ -758,18 +953,17 @@
                                 } catch (e) { console.error(e); }
                             }
 
-                            // 2. Create Wrapper (Vertical Stack)
+                            // 2. Create Wrapper
                             const wrapper = document.createElement('div');
                             wrapper.className = "flex flex-col items-center justify-end group";
 
-                            // 3. Pinyin Element (Top)
+                            // 3. Pinyin Element
                             const pinyinSpan = document.createElement('span');
                             pinyinSpan.innerHTML = pinyinStr;
                             pinyinSpan.className = "text-center leading-none text-blue-500 dark:text-blue-400 font-medium mb-1";
-                            // Dynamically set pinyin font size based on Latin slider, slightly smaller
                             pinyinSpan.style.fontSize = `${Math.max(10, this.state.settings.latinSize - 2)}px`;
 
-                            // 4. Hanzi Element (Bottom)
+                            // 4. Hanzi Element
                             const hanziSpan = document.createElement('span');
                             hanziSpan.textContent = char;
                             
@@ -807,12 +1001,10 @@
                 }
 
                 // Handle Sentence-Level Pinyin Visibility
-                // If Pinyin-Per-Char is ON, we hide all sentence-level Pinyin blocks
                 if (isPinyinPerChar) {
                     this.elements.cardPinyinTop.classList.add('hidden');
                     this.elements.blockPinyin.classList.add('hidden');
                 } else {
-                    // Standard Logic
                     if (this.state.settings.pinyinTop) {
                         this.elements.cardPinyinTop.textContent = pinyinText;
                         this.elements.cardPinyinTop.classList.remove('hidden');
