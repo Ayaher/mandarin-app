@@ -115,6 +115,11 @@
                 <i id="icon-theme" data-lucide="moon" class="w-5 h-5"></i>
             </button>
             
+            <!-- Gemini Settings Toggle -->
+            <button id="btn-gemini" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 transition-colors" onclick="app.toggleGemini()">
+                <i data-lucide="sparkles" class="w-5 h-5"></i>
+            </button>
+
             <!-- About Toggle -->
             <button id="btn-about" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 transition-colors" onclick="app.toggleAbout()">
                 <i data-lucide="info" class="w-5 h-5"></i>
@@ -219,45 +224,26 @@
 
     <!-- About Modal -->
     <div id="about-modal" class="fixed inset-0 z-[100] hidden">
-        <!-- Backdrop -->
         <div class="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity" onclick="app.toggleAbout()"></div>
-        
-        <!-- Content -->
         <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700 transform transition-all p-0">
-            <!-- Modal Header -->
             <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
                 <h3 class="text-lg font-bold text-gray-900 dark:text-white">About</h3>
                 <button onclick="app.toggleAbout()" class="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                     <i data-lucide="x" class="w-5 h-5 text-gray-500"></i>
                 </button>
             </div>
-
-            <!-- Tabs -->
             <div class="flex border-b border-gray-100 dark:border-gray-700">
-                <button id="tab-about-app" class="flex-1 py-3 text-sm font-medium border-b-2 border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10" onclick="app.setAboutTab('app')">
-                    Info
-                </button>
-                <button id="tab-about-credits" class="flex-1 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200" onclick="app.setAboutTab('credits')">
-                    Credits
-                </button>
+                <button id="tab-about-app" class="flex-1 py-3 text-sm font-medium border-b-2 border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10" onclick="app.setAboutTab('app')">Info</button>
+                <button id="tab-about-credits" class="flex-1 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200" onclick="app.setAboutTab('credits')">Credits</button>
             </div>
-
-            <!-- Body -->
             <div class="p-6">
-                <!-- App Info -->
                 <div id="content-about-app" class="space-y-4">
                     <div class="flex flex-col items-center justify-center text-center space-y-3 py-4">
-                        <div class="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white font-serif font-bold text-4xl shadow-xl shadow-blue-600/20 mb-2">
-                            文
-                        </div>
+                        <div class="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white font-serif font-bold text-4xl shadow-xl shadow-blue-600/20 mb-2">文</div>
                         <h2 class="text-xl font-bold text-gray-900 dark:text-white">Mandarin Study</h2>
-                        <p class="text-gray-600 dark:text-gray-300 leading-relaxed">
-                            A simple, distraction-free tool to visualize, practice, and understand Mandarin Chinese text structure.
-                        </p>
+                        <p class="text-gray-600 dark:text-gray-300 leading-relaxed">A simple, distraction-free tool to visualize, practice, and understand Mandarin Chinese text structure.</p>
                     </div>
                 </div>
-
-                <!-- Credits -->
                 <div id="content-about-credits" class="hidden space-y-4">
                     <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider font-semibold mb-3">Powered by Open Source</p>
                     <div class="space-y-3 text-sm">
@@ -277,11 +263,61 @@
                             <span class="font-medium text-gray-700 dark:text-gray-200">Tailwind CSS</span>
                             <i data-lucide="external-link" class="w-4 h-4 text-gray-400 group-hover:text-blue-500"></i>
                         </a>
-                        <a href="https://lucide.dev/" target="_blank" class="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group">
-                            <span class="font-medium text-gray-700 dark:text-gray-200">Lucide Icons</span>
+                         <a href="https://ai.google.dev/" target="_blank" class="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group">
+                            <span class="font-medium text-gray-700 dark:text-gray-200">Google Gemini API</span>
                             <i data-lucide="external-link" class="w-4 h-4 text-gray-400 group-hover:text-blue-500"></i>
                         </a>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gemini Settings Modal -->
+    <div id="gemini-modal" class="fixed inset-0 z-[100] hidden">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity" onclick="app.toggleGemini()"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700 transform transition-all p-0">
+            <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="sparkles" class="w-5 h-5 text-purple-600 dark:text-purple-400"></i>
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">Gemini TTS</h3>
+                </div>
+                <button onclick="app.toggleGemini()" class="p-1 rounded-full hover:bg-gray-200/50 dark:hover:bg-gray-700 transition-colors">
+                    <i data-lucide="x" class="w-5 h-5 text-gray-500"></i>
+                </button>
+            </div>
+            
+            <div class="p-6 space-y-6">
+                <!-- API Key -->
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">API Key</label>
+                    <div class="relative">
+                        <input type="password" id="gemini-api-key" placeholder="Enter your Google Gemini API Key" class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-shadow text-sm" onchange="app.saveGeminiSettings()">
+                        <i data-lucide="key" class="w-4 h-4 text-gray-400 absolute left-3 top-2.5"></i>
+                    </div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Key is stored locally in your browser.</p>
+                </div>
+
+                <!-- Voice Selection -->
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Voice</label>
+                    <select id="gemini-voice" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm" onchange="app.saveGeminiSettings()">
+                        <option value="Aoede">Aoede (Female)</option>
+                        <option value="Charon">Charon (Male)</option>
+                        <option value="Fenrir">Fenrir (Male)</option>
+                        <option value="Kore">Kore (Female)</option>
+                        <option value="Puck">Puck (Male)</option>
+                        <option value="Zephyr">Zephyr (Male)</option>
+                        <option value="Leda">Leda (Female)</option>
+                        <option value="Orus">Orus (Male)</option>
+                    </select>
+                </div>
+
+                <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg flex items-start gap-3">
+                    <i data-lucide="info" class="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5"></i>
+                    <p class="text-xs text-blue-800 dark:text-blue-300 leading-relaxed">
+                        Uses <strong>gemini-2.5-flash-preview-tts</strong> model. Ensure your API key has access to the Generative Language API.
+                    </p>
                 </div>
             </div>
         </div>
@@ -341,11 +377,16 @@
                         <p class="text-xs text-gray-400 dark:text-gray-500 mt-4">Hover over a character to see stroke order</p>
                     </div>
 
-                    <!-- Divider -->
-                    <div class="flex items-center justify-center gap-4 py-2">
-                        <div class="h-px bg-gray-200 dark:bg-gray-700 w-12 rounded-full"></div>
-                        <div class="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                        <div class="h-px bg-gray-200 dark:bg-gray-700 w-12 rounded-full"></div>
+                    <!-- Divider & Audio Control -->
+                    <div class="flex items-center justify-center gap-6 py-2">
+                        <div class="h-px bg-gray-200 dark:bg-gray-700 w-16 rounded-full"></div>
+                        
+                        <!-- Moved Audio Button Here -->
+                        <button id="btn-play-audio" onclick="app.playTTS()" class="group relative flex items-center justify-center w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all shadow-sm hover:shadow-md disabled:opacity-70 disabled:cursor-not-allowed" title="Play Audio">
+                             <i id="icon-play" data-lucide="volume-2" class="w-6 h-6 group-hover:scale-110 transition-transform"></i>
+                        </button>
+
+                        <div class="h-px bg-gray-200 dark:bg-gray-700 w-16 rounded-full"></div>
                     </div>
 
                     <!-- Pinyin & Translation -->
@@ -392,141 +433,70 @@
     </main>
 
     <script>
-        const DEFAULT_TEXT = `---
+        const DEFAULT_TEXT = `**当前来讲，与所有合成代谢/雄激素类固醇的合成代谢作用的主要模式被理解为直接激活细胞雄激素受体并增加蛋白质合成。**
 
-**近期天文学界出现几项显著进展。**
+**Pinyin:** Dāngqián lái jiǎng, yǔ suǒyǒu héchéng dàixiè/xióngjīsù lèigùchún de héchéng dàixiè zuòyòng de zhǔyào móshì bèi lǐjiě wéi zhíjiē jīhuó xìbāo xióngjīsù shòutǐ bìng zēngjiā dànbáizhì héchéng.
 
-**Pinyin:** Jìnqī tiānwénxué jiè chūxiàn jǐ xiàng xiǎnzhù jìnzhǎn.
-
-**Translation:** Recently, several significant advancements have emerged in the field of astronomy.
+**Translation:** Currently speaking, the primary mode of the anabolic action associated with all anabolic/androgenic steroids is understood as the direct activation of cellular androgen receptors and the increase of protein synthesis.
 
 **Grammar Explanation:**
-The sentence follows a standard **Time + Subject + Verb + Object** structure.
 
-* **近期 (Jìnqī):** Acts as a temporal adverbial placed at the beginning.
-* **界 (jiè):** A suffix meaning "field" or "circle" (e.g., medical field, fashion circles).
-* **几项 (jǐ xiàng):** Uses the measure word **项 (xiàng)**, which is typically used for items, tasks, or achievements.
+* **当前来讲 (Dāngqián lái jiǎng):** A common introductory phrase meaning "currently" or "as of now."
+* **被理解为 (bèi lǐjiě wéi):** A passive structure () meaning "A is understood/interpreted as."
+* **并 (bìng):** A conjunction used to connect two verbs or verb phrases (activation and increase) to show they happen concurrently or in sequence.
 
 **Core Vocabulary:**
 
-* **近期 (jìnqī):** Recent / in the near term
-* **天文学界 (tiānwénxué jiè):** The field of astronomy / astronomical community
-* **出现 (chūxiàn):** To appear / to emerge
-* **显著 (xiǎnzhù):** Significant / notable
-* **进展 (jìnzhǎn):** Progress / advancement
+* 合成代谢 (héchéng dàixiè): Anabolic
+* 雄激素 (xióngjīsù): Androgen / Androgenic
+* 类固醇 (lèigùchún): Steroid
+* 模式 (móshì): Mode / Pattern
+* 受体 (shòutǐ): Receptor
+* 蛋白质合成 (dànbáizhì héchéng): Protein synthesis
 
 ---
 
-**詹姆斯·韦伯空间望远镜捕捉到了迄今最遥远的星系MoM-z14，它的光从宇宙大爆炸后仅2.8亿年传播至今，这一发现挑战了现有宇宙早期模型并为理解宇宙演化提供新线索。**
+**如下所述，如果能够通过补充睾酮或类似的合成代谢类固醇从外部来源提高雄激素水平，则可以大大提高肌肉中蛋白质的保留率。**
 
-**Pinyin:** Zhānmǔsī·Wéibó kōngjiān wàngyuǎnjìng bǔzhuō dàole qǐjīn zuì yáoyuǎn de xīngxì MoM-z14, tā de guāng cóng yǔzhòu dà bàozhà hòu jǐn èr diǎn bā yì nián chuánbō zhìjīn, zhè yī fāxiàn tiǎozhànle xiànyǒu yǔzhòu zǎoqī móxíng bìng wèi lǐjiě yǔzhòu yǎnhuà tígōng xīn xiànsuǒ.
+**Pinyin:** Rúxià suǒshù, rúguǒ nénggòu tōngguò bǔchōng gǎotóng huò lèisì de héchéng dàixiè lèigùchún cóng wàibù láiyuán tígāo xióngjīsù shuǐpíng, zé kěyǐ dàdà tígāo jīròu zhōng dànbáizhì de bǎoliúlǜ.
 
-**Translation:** The James Webb Space Telescope has captured the most distant galaxy to date, MoM-z14; its light has traveled since only 280 million years after the Big Bang, a discovery that challenges existing early universe models and provides new clues for understanding cosmic evolution.
+**Translation:** As described below, if androgen levels can be raised from external sources by supplementing with testosterone or similar anabolic steroids, then the retention rate of protein in the muscles can be greatly improved.
 
 **Grammar Explanation:**
 
-* **V + 到了 (dàole):** Indicates the successful completion of an action (capturing the image).
-* **从... 至今 (cóng... zhìjīn):** A formal structure meaning "from [time/event] until now."
-* **并 (bìng):** A conjunction used to connect two verbs or verb phrases ("challenges" and "provides"), often implying a formal or logical progression.
+* **如下所述 (rúxià suǒshù):** A formal transition phrase meaning "as stated below" or "as follows."
+* **如果...则... (rúguǒ... zé...):** A standard conditional structure equivalent to "If... then...".
+* **通过 (tōngguò):** A preposition used here to indicate the method of supplementation.
 
 **Core Vocabulary:**
 
-* **空间望远镜 (kōngjiān wàngyuǎnjìng):** Space telescope
-* **捕捉 (bǔzhuō):** To capture / to catch
-* **迄今 (qǐjīn):** To date / until now
-* **宇宙大爆炸 (yǔzhòu dà bàozhà):** The Big Bang
-* **演化 (yǎnhuà):** Evolution
-* **线索 (xiànsuǒ):** Clue / lead
+* 睾酮 (gǎotóng): Testosterone
+* 外部来源 (wàibù láiyuán): External source
+* 提高 (tígāo): To raise / To improve
+* 肌肉 (jīròu): Muscle
+* 保留率 (bǎoliúlǜ): Retention rate
 
 ---
 
-**在系外行星研究方面，科学家利用开普勒太空望远镜数据确认了一颗与地球大小和轨道周期极为接近的类地行星，这颗行星位于其恒星的宜居带内，可能具备适合生命存在的环境。**
+**这显然是所有合成代谢/雄激素类固醇促进肌肉生长的主要原因。随着我们激素水平的增加，雄激素受体的活化也会增加，最终蛋白质的合成速度也会增加。**
 
-**Pinyin:** Zài xìwài hángxīng yánjiū fāngmiàn, kēxuédìjiā lìyòng Kāipǔlè tàikōng wàngyuǎnjìng shùjù quèrènle yī kē yǔ dìqiú dàxiǎo hé guǐdào zhōuqī jíwéi jiējìn de lèidì hángxīng, zhè kē hángxīng wèiyú qí héngxīng de yíjū dài nèi, kěnéng jùbèi shìhé shēngmìng cúnzài de huánjìng.
+**Pinyin:** Zhè xiǎnrán shì suǒyǒu héchéng dàixiè/xióngjīsù lèigùchún cùjìn jīròu shēngzhǎng de zhǔyào yuányīn. Suízhe wǒmen jīsù shuǐpíng de zēngjiā, xióngjīsù shòutǐ de huóhuà yě huì zēngjiā, zuìzhōng dànbáizhì de héchéng sùdù yě huì zēngjiā.
 
-**Translation:** In the aspect of exoplanet research, scientists used Kepler Space Telescope data to confirm an Earth-like planet with a size and orbital period extremely close to Earth's; this planet is located within its star's habitable zone and may possess an environment suitable for the existence of life.
-
-**Grammar Explanation:**
-
-* **在... 方面 (Zài... fāngmiàn):** A common frame meaning "In terms of..." or "In the aspect of..."
-* **与... 接近 (yǔ... jiējìn):** Means "close to" or "similar to."
-* **类- (lèi):** A prefix meaning "-like" or "type of" (e.g., 类地 = Earth-like).
-
-**Core Vocabulary:**
-
-* **系外行星 (xìwài hángxīng):** Exoplanet
-* **轨道周期 (guǐdào zhōuqī):** Orbital period
-* **类地行星 (lèidì hángxīng):** Terrestrial planet / Earth-like planet
-* **宜居带 (yíjū dài):** Habitable zone (Goldilocks zone)
-* **具备 (jùbèi):** To possess / to be equipped with
-
----
-
-**此外，詹姆斯·韦伯望远镜最新观测还揭示了暗物质对星系结构的影响，帮助科学家更好理解宇宙中隐藏的质量分布。**
-
-**Pinyin:** Cǐwài, Zhānmǔsī·Wéibó wàngyuǎnjìng zuìxīn guāncè hái jiēshìle ànwùzhì duì xīngxì jiégòu de yǐngxiǎng, bāngzhù kēxuédìjiā gèng hǎo lǐjiě yǔzhòu zhōng yǐncáng de zhìliàng fēnbù.
-
-**Translation:** Furthermore, the latest observations from the James Webb Telescope have also revealed the influence of dark matter on galactic structures, helping scientists better understand the distribution of hidden mass in the universe.
+**Translation:** This is clearly the primary reason why all anabolic/androgenic steroids promote muscle growth. As our hormone levels increase, the activation of androgen receptors also increases, and ultimately, the rate of protein synthesis increases as well.
 
 **Grammar Explanation:**
 
-* **此外 (Cǐwài):** A formal transition word meaning "besides" or "furthermore."
-* **对... 的影响 (duì... de yǐngxiǎng):** A standard pattern for "the influence/effect on [something]."
-* **还 (hái):** Used here to indicate an additional action or discovery.
+* **显然是 (xiǎnrán shì):** Meaning "is clearly" or "is obviously," used to state a logical conclusion.
+* **随着 (suízhe):** A preposition used to indicate that one change happens in conjunction with another ("along with" or "as...").
+* **也 (yě):** Used here to show a parallel relationship between the increase in receptors and the increase in synthesis.
 
 **Core Vocabulary:**
 
-* **揭示 (jiēshì):** To reveal / to uncover
-* **暗物质 (ànwùzhì):** Dark matter
-* **结构 (jiégòu):** Structure
-* **隐藏 (yǐncáng):** Hidden / concealed
-* **质量分布 (zhìliàng fēnbù):** Mass distribution
-
----
-
-**在太阳系内部观察方面，新发现的克鲁茨族彗星C/2026 A1正朝近日点靠近，预计今年春季将成为可通过业余望远镜观测的亮彗星。**
-
-**Pinyin:** Zài tàiyángxì nèibù guānchá fāngmiàn, xīn fāxiàn de Kèlǔcízú huìxīng C/2026 A1 zhèng cháo jìnrìdiǎn kàojìn, yùjì jīnnián chūnjì jiāng chéngwéi kě tōngguò yèyú wàngyuǎnjìng guāncè de liàng huìxīng.
-
-**Translation:** Regarding observations within the solar system, the newly discovered Kreutz sungrazer comet C/2026 A1 is currently approaching perihelion and is expected to become a bright comet observable via amateur telescopes this spring.
-
-**Grammar Explanation:**
-
-* **正 (zhèng):** Indicates an action currently in progress (approaching).
-* **朝 (cháo):** A preposition meaning "towards."
-* **可 (kě):** Used here as a prefix to a verb to mean "-able" (e.g., 可观测 = observable).
-
-**Core Vocabulary:**
-
-* **克鲁茨族 (Kèlǔcízú):** Kreutz (a family of sungrazing comets)
-* **彗星 (huìxīng):** Comet
-* **近日点 (jìnrìdiǎn):** Perihelion (the point in orbit closest to the sun)
-* **预计 (yùjì):** To estimate / to predict
-* **业余 (yèyú):** Amateur
-
----
-
-**同时，对参宿四红超巨星的新伴星观测改变了我们对这颗标志性恒星未来命运的认识。**
-
-**Pinyin:** Tóngshí, duì Shēnxiùsì hóng chāojùxīng de xīn bànxīng guāncè gǎibiànle wǒmen duì zhè kē biāozhìxìng héngxīng wèilái mìngyùn de rènshí.
-
-**Translation:** Simultaneously, observations of a new companion star to the red supergiant Betelgeuse have altered our understanding of the future fate of this iconic star.
-
-**Grammar Explanation:**
-
-* **对... 的认识 (duì... de rènshí):** A noun phrase meaning "understanding/knowledge of [something]."
-* **改变了 (gǎibiànle):** Verb + particle **了 (le)** to indicate a change in state or completed action.
-* **标志性 (biāozhìxìng):** Adjective meaning "iconic" or "landmark."
-
-**Core Vocabulary:**
-
-* **参宿四 (Shēnxiùsì):** Betelgeuse (The star Alpha Orionis)
-* **红超巨星 (hóng chāojùxīng):** Red supergiant
-* **伴星 (bànxīng):** Companion star
-* **命运 (mìngyùn):** Fate / destiny
-* **认识 (rènshí):** Understanding / cognition / knowledge
-
----`;
+* 显然 (xiǎnrán): Clearly / Obviously
+* 促进 (cùjìn): To promote / To accelerate
+* 生长 (shēngzhǎng): Growth
+* 活化 (huóhuà): Activation
+* 最终 (zuìzhōng): Ultimately / Finally`;
 
         class HanziApp {
             constructor() {
@@ -538,6 +508,7 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                     currentIndex: 0,
                     showSettings: false,
                     showAbout: false,
+                    showGemini: false,
                     aboutTab: 'app', // 'app' | 'credits'
                     darkMode: localStorage.getItem('hanzi_theme') === 'dark',
                     settings: {
@@ -547,14 +518,17 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                         pinyinTop: localStorage.getItem('hanzi_pinyin_top') === 'true',
                         pinyinPerChar: localStorage.getItem('hanzi_pinyin_char') === 'true',
                         wordColor: localStorage.getItem('hanzi_word_color') !== 'false', // Default true
-                        charMode: localStorage.getItem('hanzi_char_mode') || 'original' // 'original', 'simplified', 'traditional'
+                        charMode: localStorage.getItem('hanzi_char_mode') || 'original', // 'original', 'simplified', 'traditional'
+                        geminiApiKey: localStorage.getItem('hanzi_gemini_key') || '',
+                        geminiVoice: localStorage.getItem('hanzi_gemini_voice') || 'Aoede'
                     },
                     currentWriter: null,
                     converters: {
                         toSimp: null,
                         toTrad: null
                     },
-                    segmenter: null
+                    segmenter: null,
+                    audioContext: null
                 };
 
                 // DOM Elements
@@ -606,6 +580,14 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                     contentAboutApp: document.getElementById('content-about-app'),
                     contentAboutCredits: document.getElementById('content-about-credits'),
                     
+                    // Gemini Elements
+                    btnGemini: document.getElementById('btn-gemini'),
+                    geminiModal: document.getElementById('gemini-modal'),
+                    inputGeminiKey: document.getElementById('gemini-api-key'),
+                    selectGeminiVoice: document.getElementById('gemini-voice'),
+                    btnPlayAudio: document.getElementById('btn-play-audio'),
+                    iconPlay: document.getElementById('icon-play'),
+                    
                     // Popup Elements
                     strokePopup: document.getElementById('stroke-popup'),
                     strokeTarget: document.getElementById('stroke-target'),
@@ -636,6 +618,7 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                 // Initial UI Render
                 this.updateModeUI();
                 this.updateSettingsUI();
+                this.updateGeminiUI();
                 this.renderCard();
                 
                 // Initialize Icons
@@ -783,6 +766,29 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                     this.elements.aboutModal.classList.add('hidden');
                     this.elements.btnAbout.classList.remove('bg-blue-100', 'text-blue-600', 'dark:bg-blue-900', 'dark:text-blue-300');
                 }
+            }
+            
+            toggleGemini() {
+                this.state.showGemini = !this.state.showGemini;
+                if (this.state.showGemini) {
+                    this.elements.geminiModal.classList.remove('hidden');
+                    this.elements.btnGemini.classList.add('bg-blue-100', 'text-blue-600', 'dark:bg-blue-900', 'dark:text-blue-300');
+                } else {
+                    this.elements.geminiModal.classList.add('hidden');
+                    this.elements.btnGemini.classList.remove('bg-blue-100', 'text-blue-600', 'dark:bg-blue-900', 'dark:text-blue-300');
+                }
+            }
+
+            saveGeminiSettings() {
+                this.state.settings.geminiApiKey = this.elements.inputGeminiKey.value;
+                this.state.settings.geminiVoice = this.elements.selectGeminiVoice.value;
+                localStorage.setItem('hanzi_gemini_key', this.state.settings.geminiApiKey);
+                localStorage.setItem('hanzi_gemini_voice', this.state.settings.geminiVoice);
+            }
+            
+            updateGeminiUI() {
+                this.elements.inputGeminiKey.value = this.state.settings.geminiApiKey;
+                this.elements.selectGeminiVoice.value = this.state.settings.geminiVoice;
             }
 
             setAboutTab(tab) {
@@ -940,6 +946,135 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                 
                 this.elements.cardTranslation.style.fontSize = `${s.latinSize}px`;
                 this.elements.blockExtras.style.fontSize = `${s.latinSize - 2}px`;
+            }
+            
+            async playTTS() {
+                const apiKey = this.state.settings.geminiApiKey;
+                if (!apiKey) {
+                    this.toggleGemini();
+                    alert("Please enter your Gemini API Key in the settings.");
+                    return;
+                }
+
+                const card = this.state.cards[this.state.currentIndex];
+                let textToSpeak = card.hanzi;
+                
+                if (!textToSpeak) return;
+
+                const voice = this.state.settings.geminiVoice;
+                
+                // UI Loading State
+                this.elements.btnPlayAudio.disabled = true; // Disable button
+                this.elements.iconPlay.setAttribute('data-lucide', 'loader-2');
+                this.elements.iconPlay.classList.add('animate-spin');
+                lucide.createIcons();
+
+                try {
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: textToSpeak }] }],
+                            generationConfig: {
+                                responseModalities: ["AUDIO"],
+                                speechConfig: {
+                                    voiceConfig: {
+                                        prebuiltVoiceConfig: {
+                                            voiceName: voice
+                                        }
+                                    }
+                                }
+                            }
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const err = await response.json();
+                        throw new Error(err.error?.message || 'Failed to generate speech');
+                    }
+
+                    const data = await response.json();
+                    const audioData = data.candidates?.[0]?.content?.parts?.[0]?.inlineData;
+
+                    if (audioData) {
+                        const binaryString = atob(audioData.data);
+                        const len = binaryString.length;
+                        const bytes = new Uint8Array(len);
+                        for (let i = 0; i < len; i++) {
+                            bytes[i] = binaryString.charCodeAt(i);
+                        }
+
+                        // Parse Sample Rate from mimeType if available, e.g., "audio/pcm; rate=24000"
+                        let sampleRate = 24000; // Default for Gemini
+                        if (audioData.mimeType) {
+                             const match = audioData.mimeType.match(/rate=(\d+)/);
+                             if (match && match[1]) {
+                                 sampleRate = parseInt(match[1]);
+                             }
+                        }
+
+                        const wavBytes = this.pcmToWav(bytes, sampleRate);
+                        const blob = new Blob([wavBytes], { type: 'audio/wav' });
+                        const url = URL.createObjectURL(blob);
+                        const audio = new Audio(url);
+                        audio.play();
+                    }
+
+                } catch (error) {
+                    console.error("TTS Error:", error);
+                    alert("Error generating audio: " + error.message);
+                } finally {
+                    this.elements.btnPlayAudio.disabled = false; // Enable button
+                    this.elements.iconPlay.setAttribute('data-lucide', 'volume-2');
+                    this.elements.iconPlay.classList.remove('animate-spin');
+                    lucide.createIcons();
+                }
+            }
+
+            pcmToWav(pcmData, sampleRate) {
+                const numChannels = 1; // Gemini is mono
+                const bitsPerSample = 16;
+                const byteRate = sampleRate * numChannels * bitsPerSample / 8;
+                const blockAlign = numChannels * bitsPerSample / 8;
+                const wavHeaderSize = 44;
+                const dataSize = pcmData.length;
+                const fileSize = wavHeaderSize + dataSize - 8;
+
+                const buffer = new ArrayBuffer(wavHeaderSize + dataSize);
+                const view = new DataView(buffer);
+
+                // RIFF chunk descriptor
+                this.writeString(view, 0, 'RIFF');
+                view.setUint32(4, fileSize, true);
+                this.writeString(view, 8, 'WAVE');
+
+                // fmt sub-chunk
+                this.writeString(view, 12, 'fmt ');
+                view.setUint32(16, 16, true); // Subchunk1Size (16 for PCM)
+                view.setUint16(20, 1, true); // AudioFormat (1 for PCM)
+                view.setUint16(22, numChannels, true);
+                view.setUint32(24, sampleRate, true);
+                view.setUint32(28, byteRate, true);
+                view.setUint16(32, blockAlign, true);
+                view.setUint16(34, bitsPerSample, true);
+
+                // data sub-chunk
+                this.writeString(view, 36, 'data');
+                view.setUint32(40, dataSize, true);
+
+                // Write PCM data
+                const pcmView = new Uint8Array(buffer, wavHeaderSize);
+                pcmView.set(pcmData);
+
+                return buffer;
+            }
+
+            writeString(view, offset, string) {
+                for (let i = 0; i < string.length; i++) {
+                    view.setUint8(offset + i, string.charCodeAt(i));
+                }
             }
 
             showStrokePopup(char, targetElement) {
