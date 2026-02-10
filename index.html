@@ -399,6 +399,22 @@
                             <i data-lucide="align-left" class="w-5 h-5"></i>
                         </button>
                     </div>
+
+                    <!-- Toggle Stroke Order -->
+                    <div class="group relative flex items-center">
+                        <span class="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none hidden md:block z-50">Stroke Order on Hover</span>
+                        <button id="btn-toggle-stroke-order" onclick="app.toggleSetting('strokeOrder')" class="w-10 h-10 rounded-xl flex items-center justify-center transition-all shadow-sm">
+                            <i data-lucide="pen-tool" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+
+                    <!-- Toggle Translation -->
+                    <div class="group relative flex items-center">
+                        <span class="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none hidden md:block z-50">Toggle Translation</span>
+                        <button id="btn-toggle-translation" onclick="app.toggleSetting('showTranslation')" class="w-10 h-10 rounded-xl flex items-center justify-center transition-all shadow-sm">
+                            <i data-lucide="languages" class="w-5 h-5"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Main Card (Right) -->
@@ -639,6 +655,8 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                         pinyinTop: localStorage.getItem('hanzi_pinyin_top') === 'true',
                         pinyinPerChar: localStorage.getItem('hanzi_pinyin_char') === 'true',
                         wordColor: localStorage.getItem('hanzi_word_color') !== 'false',
+                        strokeOrder: localStorage.getItem('hanzi_stroke_order') !== 'false', // Default true
+                        showTranslation: localStorage.getItem('hanzi_show_translation') !== 'false', // Default true
                         charMode: localStorage.getItem('hanzi_char_mode') || 'original',
                         geminiApiKey: localStorage.getItem('hanzi_gemini_key') || '',
                         geminiVoice: localStorage.getItem('hanzi_gemini_voice') || 'Aoede'
@@ -685,6 +703,7 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                     cardPinyin: document.getElementById('card-pinyin'),
                     blockPinyin: document.getElementById('block-pinyin'),
                     cardTranslation: document.getElementById('card-translation'),
+                    blockTranslation: document.getElementById('block-translation'), // New
                     blockExtras: document.getElementById('block-extras'),
                     progressFill: document.getElementById('progress-fill'),
                     progressCurrent: document.getElementById('progress-current'),
@@ -700,6 +719,8 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                     btnToggleColor: document.getElementById('btn-toggle-color'),
                     btnTogglePinyinChar: document.getElementById('btn-toggle-pinyin-char'),
                     btnTogglePinyinTop: document.getElementById('btn-toggle-pinyin-top'),
+                    btnToggleStrokeOrder: document.getElementById('btn-toggle-stroke-order'), // New
+                    btnToggleTranslation: document.getElementById('btn-toggle-translation'), // New
 
                     // About Elements
                     btnAbout: document.getElementById('btn-about'),
@@ -1003,7 +1024,7 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                 this.saveSettings();
                 
                 // If special handling needed
-                if (key === 'pinyinTop' || key === 'pinyinPerChar' || key === 'wordColor') {
+                if (key === 'pinyinTop' || key === 'pinyinPerChar' || key === 'wordColor' || key === 'strokeOrder' || key === 'showTranslation') {
                     this.renderCard(); // Just re-render card logic
                 }
                 
@@ -1030,6 +1051,8 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                 localStorage.setItem('hanzi_pinyin_top', this.state.settings.pinyinTop);
                 localStorage.setItem('hanzi_pinyin_char', this.state.settings.pinyinPerChar);
                 localStorage.setItem('hanzi_word_color', this.state.settings.wordColor);
+                localStorage.setItem('hanzi_stroke_order', this.state.settings.strokeOrder);
+                localStorage.setItem('hanzi_show_translation', this.state.settings.showTranslation);
                 localStorage.setItem('hanzi_char_mode', this.state.settings.charMode);
             }
             
@@ -1069,6 +1092,8 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                 updateBtnState(this.elements.btnToggleColor, s.wordColor);
                 updateBtnState(this.elements.btnTogglePinyinChar, s.pinyinPerChar);
                 updateBtnState(this.elements.btnTogglePinyinTop, s.pinyinTop);
+                updateBtnState(this.elements.btnToggleStrokeOrder, s.strokeOrder);
+                updateBtnState(this.elements.btnToggleTranslation, s.showTranslation);
 
                 // Disable logic REMOVED: All buttons are independent now.
                 this.elements.btnTogglePinyinTop.disabled = false;
@@ -1519,8 +1544,12 @@ ${vocabList}`;
                                 
                                 if (isHanzi) {
                                     hanziSpan.className = `hanzi-char cursor-pointer leading-none transition-colors hover:opacity-75 ${currentColorClass}`;
-                                    hanziSpan.addEventListener('mouseenter', (e) => this.showStrokePopup(char, e.target));
-                                    hanziSpan.addEventListener('mouseleave', () => this.hideStrokePopup());
+                                    
+                                    // Add Stroke Order Listeners only if enabled
+                                    if (this.state.settings.strokeOrder) {
+                                        hanziSpan.addEventListener('mouseenter', (e) => this.showStrokePopup(char, e.target));
+                                        hanziSpan.addEventListener('mouseleave', () => this.hideStrokePopup());
+                                    }
                                 } else {
                                     hanziSpan.className = 'leading-none text-gray-800 dark:text-gray-200';
                                 }
@@ -1535,8 +1564,13 @@ ${vocabList}`;
                                     const span = document.createElement('span');
                                     span.textContent = char;
                                     span.className = `hanzi-char cursor-pointer transition-colors inline-block hover:opacity-75 ${currentColorClass}`; 
-                                    span.addEventListener('mouseenter', (e) => this.showStrokePopup(char, e.target));
-                                    span.addEventListener('mouseleave', () => this.hideStrokePopup());
+                                    
+                                    // Add Stroke Order Listeners only if enabled
+                                    if (this.state.settings.strokeOrder) {
+                                        span.addEventListener('mouseenter', (e) => this.showStrokePopup(char, e.target));
+                                        span.addEventListener('mouseleave', () => this.hideStrokePopup());
+                                    }
+                                    
                                     hanziContainer.appendChild(span);
                                 } else {
                                     const span = document.createElement('span');
@@ -1564,6 +1598,13 @@ ${vocabList}`;
                 }
 
                 this.elements.cardTranslation.textContent = card.translation || "";
+                
+                // Toggle Translation Visibility
+                if (this.state.settings.showTranslation) {
+                    this.elements.blockTranslation.classList.remove('hidden');
+                } else {
+                    this.elements.blockTranslation.classList.add('hidden');
+                }
 
                 // Render Extras
                 if (card.extras && card.extras.length > 0) {
