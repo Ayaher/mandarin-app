@@ -378,7 +378,7 @@
                 <div class="flex md:flex-col gap-3 justify-center md:justify-start w-full md:w-auto order-2 md:order-1">
                     <!-- Word Coloring Toggle -->
                     <div class="group relative flex items-center">
-                        <span class="absolute right-full mr-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none hidden md:block">Color Words</span>
+                        <span class="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none hidden md:block z-50">Color Words</span>
                         <button id="btn-toggle-color" onclick="app.toggleSetting('wordColor')" class="w-10 h-10 rounded-xl flex items-center justify-center transition-all shadow-sm">
                             <i data-lucide="palette" class="w-5 h-5"></i>
                         </button>
@@ -386,7 +386,7 @@
 
                     <!-- Pinyin Per Char Toggle -->
                     <div class="group relative flex items-center">
-                        <span class="absolute right-full mr-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none hidden md:block">Pinyin per Character</span>
+                        <span class="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none hidden md:block z-50">Pinyin per Character</span>
                         <button id="btn-toggle-pinyin-char" onclick="app.toggleSetting('pinyinPerChar')" class="w-10 h-10 rounded-xl flex items-center justify-center transition-all shadow-sm">
                             <i data-lucide="type" class="w-5 h-5"></i>
                         </button>
@@ -394,7 +394,7 @@
 
                     <!-- Toggle Sentence Pinyin -->
                     <div class="group relative flex items-center">
-                        <span class="absolute right-full mr-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none hidden md:block">Toggle Sentence Pinyin</span>
+                        <span class="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none hidden md:block z-50">Toggle Sentence Pinyin</span>
                         <button id="btn-toggle-pinyin-top" onclick="app.toggleSetting('pinyinTop')" class="w-10 h-10 rounded-xl flex items-center justify-center transition-all shadow-sm">
                             <i data-lucide="align-left" class="w-5 h-5"></i>
                         </button>
@@ -425,7 +425,6 @@
                                 <!-- Main Hanzi Container -->
                                 <div id="card-hanzi" class="text-gray-900 dark:text-white transition-all duration-200 break-words leading-tight flex justify-center"></div>
 
-                                <p class="text-xs text-gray-400 dark:text-gray-500 mt-4">Hover over a character to see stroke order</p>
                             </div>
 
                             <!-- Divider & Audio Control -->
