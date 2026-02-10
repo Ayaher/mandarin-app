@@ -135,84 +135,72 @@
         </div>
     </header>
 
-    <!-- Settings Panel -->
-    <div id="settings-panel" class="hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 shadow-md relative z-40">
-        <!-- Hanzi Size -->
-        <div class="space-y-3">
-            <label class="text-sm font-medium text-gray-500 dark:text-gray-400 flex items-center justify-between">
-                <span class="flex items-center gap-2"><i data-lucide="type" class="w-4 h-4"></i> Hanzi Size</span>
-                <span id="label-hanzi-size" class="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">54px</span>
-            </label>
-            <input type="range" id="input-hanzi-size" min="24" max="128" value="54" class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-600">
-        </div>
+    <!-- Settings Drawer (Right Slide-In) -->
+    <div id="settings-drawer" class="fixed inset-0 z-[100] hidden">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity" onclick="app.toggleSettings()"></div>
         
-        <!-- Latin Size -->
-        <div class="space-y-3">
-            <label class="text-sm font-medium text-gray-500 dark:text-gray-400 flex items-center justify-between">
-                <span class="flex items-center gap-2"><i data-lucide="type" class="w-4 h-4"></i> Latin Size</span>
-                <span id="label-latin-size" class="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">18px</span>
-            </label>
-            <input type="range" id="input-latin-size" min="12" max="32" value="18" class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-600">
-        </div>
-
-        <!-- Font Style -->
-        <div class="space-y-3">
-            <label class="text-sm font-medium text-gray-500 dark:text-gray-400">Font Style</label>
-            <div class="flex gap-2">
-                <button id="btn-font-sans" class="flex-1 py-2 px-3 rounded-md text-sm border font-noto-sans" onclick="app.setFontStyle('sans')">
-                    Sans (黑体)
-                </button>
-                <button id="btn-font-serif" class="flex-1 py-2 px-3 rounded-md text-sm border font-noto-serif" onclick="app.setFontStyle('serif')">
-                    Serif (宋体)
+        <!-- Panel -->
+        <div id="settings-panel" class="absolute top-0 right-0 h-full w-80 bg-white dark:bg-gray-800 shadow-2xl transform transition-transform duration-300 translate-x-full border-l border-gray-200 dark:border-gray-700 flex flex-col">
+            <!-- Header -->
+            <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="settings" class="w-5 h-5 text-gray-500"></i>
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">Settings</h3>
+                </div>
+                <button onclick="app.toggleSettings()" class="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <i data-lucide="x" class="w-5 h-5 text-gray-500"></i>
                 </button>
             </div>
-        </div>
 
-        <!-- Character Mode -->
-        <div class="space-y-3">
-            <label class="text-sm font-medium text-gray-500 dark:text-gray-400">Character Mode</label>
-            <div class="flex gap-2">
-                <button id="btn-char-orig" class="flex-1 py-2 px-1 rounded-md text-xs border truncate" onclick="app.setCharMode('original')">
-                    Original
-                </button>
-                <button id="btn-char-simp" class="flex-1 py-2 px-1 rounded-md text-xs border truncate" onclick="app.setCharMode('simplified')">
-                    Simplified
-                </button>
-                <button id="btn-char-trad" class="flex-1 py-2 px-1 rounded-md text-xs border truncate" onclick="app.setCharMode('traditional')">
-                    Traditional
-                </button>
-            </div>
-        </div>
+            <!-- Content -->
+            <div class="p-6 space-y-8 flex-1 overflow-y-auto">
+                <!-- Hanzi Size -->
+                <div class="space-y-3">
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400 flex items-center justify-between">
+                        <span class="flex items-center gap-2"><i data-lucide="type" class="w-4 h-4"></i> Hanzi Size</span>
+                        <span id="label-hanzi-size" class="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">54px</span>
+                    </label>
+                    <input type="range" id="input-hanzi-size" min="24" max="128" value="54" class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                </div>
+                
+                <!-- Latin Size -->
+                <div class="space-y-3">
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400 flex items-center justify-between">
+                        <span class="flex items-center gap-2"><i data-lucide="type" class="w-4 h-4"></i> Latin Size</span>
+                        <span id="label-latin-size" class="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">18px</span>
+                    </label>
+                    <input type="range" id="input-latin-size" min="12" max="32" value="18" class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                </div>
 
-        <!-- Display Options -->
-        <div class="space-y-3 lg:col-span-4 border-t border-gray-100 dark:border-gray-700 pt-4 mt-2">
-             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <!-- Word Coloring -->
-                <label class="flex items-center justify-between p-2 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                    <span class="text-sm text-gray-700 dark:text-gray-300">Color Words</span>
-                    <div class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" id="input-word-color" class="sr-only peer">
-                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                <!-- Font Style -->
+                <div class="space-y-3">
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">Font Style</label>
+                    <div class="flex gap-2">
+                        <button id="btn-font-sans" class="flex-1 py-2 px-3 rounded-md text-sm border font-noto-sans" onclick="app.setFontStyle('sans')">
+                            Sans (黑体)
+                        </button>
+                        <button id="btn-font-serif" class="flex-1 py-2 px-3 rounded-md text-sm border font-noto-serif" onclick="app.setFontStyle('serif')">
+                            Serif (宋体)
+                        </button>
                     </div>
-                </label>
+                </div>
 
-                <!-- Pinyin Above Hanzi (Per Char) -->
-                <label class="flex items-center justify-between p-2 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                    <span class="text-sm text-gray-700 dark:text-gray-300">Pinyin per Character</span>
-                    <div class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" id="input-pinyin-char" class="sr-only peer">
-                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                <!-- Character Mode -->
+                <div class="space-y-3 pt-4 border-t border-gray-100 dark:border-gray-700">
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">Character Mode</label>
+                    <div class="flex flex-col gap-2">
+                        <button id="btn-char-orig" class="w-full py-2 px-3 rounded-md text-sm border text-left" onclick="app.setCharMode('original')">
+                            Original Text
+                        </button>
+                        <button id="btn-char-simp" class="w-full py-2 px-3 rounded-md text-sm border text-left" onclick="app.setCharMode('simplified')">
+                            Simplified (简体)
+                        </button>
+                        <button id="btn-char-trad" class="w-full py-2 px-3 rounded-md text-sm border text-left" onclick="app.setCharMode('traditional')">
+                            Traditional (繁體)
+                        </button>
                     </div>
-                </label>
-
-                <!-- Pinyin Placement (Sentence Level) - Only visible if Per Char is OFF -->
-                <label id="option-pinyin-placement" class="flex items-center justify-between p-2 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                    <span class="text-sm text-gray-700 dark:text-gray-300">Full Sentence Top</span>
-                    <div class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" id="input-pinyin-top" class="sr-only peer">
-                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-                    </div>
-                </label>
+                </div>
             </div>
         </div>
     </div>
@@ -354,6 +342,7 @@
             <div class="mt-4 flex flex-col md:flex-row justify-end items-center gap-3">
                 <div class="w-full md:w-auto relative">
                     <select id="ai-model-select" class="w-full md:w-48 pl-3 pr-8 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500/50 appearance-none shadow-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                        <option value="gemini-2.5-flash-preview-09-2025">Gemini 2.5 Flash (Fastest)</option>
                         <option value="gemini-2.0-flash">Gemini 2.0 Flash (Fastest)</option>
                         <option value="gemini-2.5-pro">Gemini 2.5 Pro (Best Quality)</option>
                     </select>
@@ -367,7 +356,7 @@
         </div>
 
         <!-- Study View -->
-        <div id="view-study" class="flex-1 flex flex-col max-w-3xl mx-auto w-full animate-in fade-in duration-300 relative">
+        <div id="view-study" class="flex-1 flex flex-col max-w-4xl mx-auto w-full animate-in fade-in duration-300 relative">
             
             <!-- Progress Bar -->
             <div class="mb-6">
@@ -382,83 +371,115 @@
                 </div>
             </div>
 
-            <!-- Card Container -->
-            <div id="card-container" class="bg-white dark:bg-gray-800 rounded-3xl shadow-xl shadow-gray-200/50 dark:shadow-black/20 border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col relative transition-colors duration-300 min-h-[400px]">
+            <!-- Card Layout Wrapper -->
+            <div class="flex flex-col md:flex-row gap-4 items-start relative">
                 
-                <!-- Decorative Top Bar -->
-                <div class="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-blue-500 to-indigo-500 opacity-80"></div>
-
-                <!-- Empty State -->
-                <div id="empty-state" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-8 text-gray-500 dark:text-gray-400">
-                    <i data-lucide="book-open" class="w-12 h-12 mb-4 opacity-20"></i>
-                    <p>No cards found.</p>
-                    <button onclick="app.setMode('input')" class="mt-4 text-blue-600 hover:underline">Switch to Input Mode</button>
-                </div>
-
-                <!-- Card Content -->
-                <div id="card-content" class="p-8 md:p-12 space-y-8 flex-1 overflow-y-auto">
-                    <!-- Hanzi Area -->
-                    <div class="text-center space-y-2">
-                         <!-- Top Pinyin Placeholder (Sentence Level) -->
-                        <p id="card-pinyin-top" class="hidden text-blue-600 dark:text-blue-400 font-medium leading-relaxed mb-1 transition-all"></p>
-                        
-                        <!-- Main Hanzi Container: Can be standard flow OR flex grid based on settings -->
-                        <div id="card-hanzi" class="text-gray-900 dark:text-white transition-all duration-200 break-words leading-tight flex justify-center"></div>
-
-                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-4">Hover over a character to see stroke order</p>
+                <!-- Side Toolbar (Left) -->
+                <div class="flex md:flex-col gap-3 justify-center md:justify-start w-full md:w-auto order-2 md:order-1">
+                    <!-- Word Coloring Toggle -->
+                    <div class="group relative flex items-center">
+                        <span class="absolute right-full mr-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none hidden md:block">Color Words</span>
+                        <button id="btn-toggle-color" onclick="app.toggleSetting('wordColor')" class="w-10 h-10 rounded-xl flex items-center justify-center transition-all shadow-sm">
+                            <i data-lucide="palette" class="w-5 h-5"></i>
+                        </button>
                     </div>
 
-                    <!-- Divider & Audio Control -->
-                    <div class="flex items-center justify-center gap-6 py-2">
-                        <div class="h-px bg-gray-200 dark:bg-gray-700 w-16 rounded-full"></div>
+                    <!-- Pinyin Per Char Toggle -->
+                    <div class="group relative flex items-center">
+                        <span class="absolute right-full mr-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none hidden md:block">Pinyin per Character</span>
+                        <button id="btn-toggle-pinyin-char" onclick="app.toggleSetting('pinyinPerChar')" class="w-10 h-10 rounded-xl flex items-center justify-center transition-all shadow-sm">
+                            <i data-lucide="type" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+
+                    <!-- Toggle Sentence Pinyin -->
+                    <div class="group relative flex items-center">
+                        <span class="absolute right-full mr-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none hidden md:block">Toggle Sentence Pinyin</span>
+                        <button id="btn-toggle-pinyin-top" onclick="app.toggleSetting('pinyinTop')" class="w-10 h-10 rounded-xl flex items-center justify-center transition-all shadow-sm">
+                            <i data-lucide="align-left" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Main Card (Right) -->
+                <div class="flex-1 order-1 md:order-2 w-full min-w-0">
+                    <div id="card-container" class="bg-white dark:bg-gray-800 rounded-3xl shadow-xl shadow-gray-200/50 dark:shadow-black/20 border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col relative transition-colors duration-300 min-h-[400px]">
                         
-                        <!-- Moved Audio Button Here -->
-                        <button id="btn-play-audio" onclick="app.playTTS()" class="group relative flex items-center justify-center w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all shadow-sm hover:shadow-md disabled:opacity-70 disabled:cursor-not-allowed" title="Play Audio">
-                             <i id="icon-play" data-lucide="volume-2" class="w-6 h-6 group-hover:scale-110 transition-transform"></i>
+                        <!-- Decorative Top Bar -->
+                        <div class="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-blue-500 to-indigo-500 opacity-80"></div>
+
+                        <!-- Empty State -->
+                        <div id="empty-state" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-8 text-gray-500 dark:text-gray-400">
+                            <i data-lucide="book-open" class="w-12 h-12 mb-4 opacity-20"></i>
+                            <p>No cards found.</p>
+                            <button onclick="app.setMode('input')" class="mt-4 text-blue-600 hover:underline">Switch to Input Mode</button>
+                        </div>
+
+                        <!-- Card Content -->
+                        <div id="card-content" class="p-8 md:p-12 space-y-8 flex-1 overflow-y-auto">
+                            <!-- Hanzi Area -->
+                            <div class="text-center space-y-2">
+                                <!-- Top Pinyin Placeholder (DEPRECATED but kept hidden for logic safety) -->
+                                <p id="card-pinyin-top" class="hidden text-blue-600 dark:text-blue-400 font-medium leading-relaxed mb-1 transition-all"></p>
+                                
+                                <!-- Main Hanzi Container -->
+                                <div id="card-hanzi" class="text-gray-900 dark:text-white transition-all duration-200 break-words leading-tight flex justify-center"></div>
+
+                                <p class="text-xs text-gray-400 dark:text-gray-500 mt-4">Hover over a character to see stroke order</p>
+                            </div>
+
+                            <!-- Divider & Audio Control -->
+                            <div class="flex items-center justify-center gap-6 py-2">
+                                <div class="h-px bg-gray-200 dark:bg-gray-700 w-16 rounded-full"></div>
+                                
+                                <button id="btn-play-audio" onclick="app.playTTS()" class="group relative flex items-center justify-center w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all shadow-sm hover:shadow-md disabled:opacity-70 disabled:cursor-not-allowed" title="Play Audio">
+                                    <i id="icon-play" data-lucide="volume-2" class="w-6 h-6 group-hover:scale-110 transition-transform"></i>
+                                </button>
+
+                                <div class="h-px bg-gray-200 dark:bg-gray-700 w-16 rounded-full"></div>
+                            </div>
+
+                            <!-- Pinyin & Translation -->
+                            <div class="space-y-6">
+                                <div id="block-pinyin" class="space-y-1">
+                                    <span class="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider block">Pinyin</span>
+                                    <p id="card-pinyin" class="text-gray-800 dark:text-gray-200 font-medium leading-relaxed"></p>
+                                </div>
+
+                                <div id="block-translation" class="space-y-1">
+                                    <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">Translation</span>
+                                    <p id="card-translation" class="text-gray-600 dark:text-gray-300 italic leading-relaxed"></p>
+                                </div>
+                            </div>
+
+                            <!-- Extras -->
+                            <div id="block-extras" class="hidden mt-8 pt-8 border-t border-dashed border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 space-y-2">
+                                <!-- Dynamic Content injected here -->
+                            </div>
+                        </div>
+
+                        <!-- Footer Hint -->
+                        <div class="bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700 px-6 py-3 flex justify-between items-center text-xs text-gray-400">
+                            <span id="footer-counter">Card 1 of 1</span>
+                            <span class="hidden md:inline-flex items-center gap-2">
+                                Use <kbd class="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded px-1.5 py-0.5 font-mono text-[10px]">←</kbd> <kbd class="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded px-1.5 py-0.5 font-mono text-[10px]">→</kbd> to navigate
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Navigation Buttons (Inside Main Column) -->
+                    <div class="flex justify-between items-center mt-6 gap-4">
+                        <button id="btn-prev" onclick="app.prevCard()" class="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 shadow-lg shadow-gray-200/50 dark:shadow-black/20 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95">
+                            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                            <span class="font-medium">Previous</span>
                         </button>
 
-                        <div class="h-px bg-gray-200 dark:bg-gray-700 w-16 rounded-full"></div>
-                    </div>
-
-                    <!-- Pinyin & Translation -->
-                    <div class="space-y-6">
-                        <div id="block-pinyin" class="space-y-1">
-                            <span class="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider block">Pinyin</span>
-                            <p id="card-pinyin" class="text-gray-800 dark:text-gray-200 font-medium leading-relaxed"></p>
-                        </div>
-
-                        <div id="block-translation" class="space-y-1">
-                            <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">Translation</span>
-                            <p id="card-translation" class="text-gray-600 dark:text-gray-300 italic leading-relaxed"></p>
-                        </div>
-                    </div>
-
-                    <!-- Extras -->
-                    <div id="block-extras" class="hidden mt-8 pt-8 border-t border-dashed border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 space-y-2">
-                        <!-- Dynamic Content injected here -->
+                        <button id="btn-next" onclick="app.nextCard()" class="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/30 hover:bg-blue-700 disabled:opacity-50 disabled:bg-gray-300 disabled:shadow-none disabled:text-gray-500 disabled:cursor-not-allowed transition-all active:scale-95">
+                            <span class="font-medium">Next</span>
+                            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        </button>
                     </div>
                 </div>
-
-                <!-- Footer Hint -->
-                <div class="bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700 px-6 py-3 flex justify-between items-center text-xs text-gray-400">
-                    <span id="footer-counter">Card 1 of 1</span>
-                    <span class="hidden md:inline-flex items-center gap-2">
-                        Use <kbd class="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded px-1.5 py-0.5 font-mono text-[10px]">←</kbd> <kbd class="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded px-1.5 py-0.5 font-mono text-[10px]">→</kbd> to navigate
-                    </span>
-                </div>
-            </div>
-
-            <!-- Navigation Buttons -->
-            <div class="flex justify-between items-center mt-6 gap-4">
-                <button id="btn-prev" onclick="app.prevCard()" class="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 shadow-lg shadow-gray-200/50 dark:shadow-black/20 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95">
-                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
-                    <span class="font-medium">Previous</span>
-                </button>
-
-                <button id="btn-next" onclick="app.nextCard()" class="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/30 hover:bg-blue-700 disabled:opacity-50 disabled:bg-gray-300 disabled:shadow-none disabled:text-gray-500 disabled:cursor-not-allowed transition-all active:scale-95">
-                    <span class="font-medium">Next</span>
-                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
-                </button>
             </div>
         </div>
     </main>
@@ -638,11 +659,12 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                     viewAiInput: document.getElementById('view-ai-input'),
                     aiInputText: document.getElementById('ai-input-text'),
                     aiCharCount: document.getElementById('ai-char-count'),
-                    aiModelSelect: document.getElementById('ai-model-select'), // New
+                    aiModelSelect: document.getElementById('ai-model-select'), 
                     btnGenerateAi: document.getElementById('btn-generate-ai'),
                     iconGenerate: document.getElementById('icon-generate'),
                     
-                    settingsPanel: document.getElementById('settings-panel'),
+                    settingsPanel: document.getElementById('settings-panel'), // Note: this is now the inner panel
+                    settingsDrawer: document.getElementById('settings-drawer'), // New wrapper
                     btnSettings: document.getElementById('btn-settings'),
                     btnModeView: document.getElementById('btn-mode-view'),
                     btnModeInput: document.getElementById('btn-mode-input'),
@@ -656,10 +678,7 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                     
                     inputHanziSize: document.getElementById('input-hanzi-size'),
                     inputLatinSize: document.getElementById('input-latin-size'),
-                    inputPinyinTop: document.getElementById('input-pinyin-top'),
-                    inputPinyinChar: document.getElementById('input-pinyin-char'), 
-                    inputWordColor: document.getElementById('input-word-color'),
-                    optionPinyinPlacement: document.getElementById('option-pinyin-placement'), 
+                    
                     labelHanziSize: document.getElementById('label-hanzi-size'),
                     labelLatinSize: document.getElementById('label-latin-size'),
                     cardHanzi: document.getElementById('card-hanzi'),
@@ -678,6 +697,11 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                     cardContent: document.getElementById('card-content'),
                     iconTheme: document.getElementById('icon-theme'),
                     
+                    // Toolbar Buttons (New)
+                    btnToggleColor: document.getElementById('btn-toggle-color'),
+                    btnTogglePinyinChar: document.getElementById('btn-toggle-pinyin-char'),
+                    btnTogglePinyinTop: document.getElementById('btn-toggle-pinyin-top'),
+
                     // About Elements
                     btnAbout: document.getElementById('btn-about'),
                     aboutModal: document.getElementById('about-modal'),
@@ -747,24 +771,6 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                 this.elements.inputLatinSize.addEventListener('input', (e) => {
                     this.state.settings.latinSize = parseInt(e.target.value);
                     this.updateSettingsUI();
-                    this.saveSettings();
-                });
-
-                // Toggle Inputs
-                this.elements.inputPinyinTop.addEventListener('change', (e) => {
-                    this.state.settings.pinyinTop = e.target.checked;
-                    this.renderCard();
-                    this.saveSettings();
-                });
-                this.elements.inputPinyinChar.addEventListener('change', (e) => {
-                    this.state.settings.pinyinPerChar = e.target.checked;
-                    this.updateSettingsUI(); 
-                    this.renderCard();
-                    this.saveSettings();
-                });
-                this.elements.inputWordColor.addEventListener('change', (e) => {
-                    this.state.settings.wordColor = e.target.checked;
-                    this.renderCard();
                     this.saveSettings();
                 });
 
@@ -853,12 +859,23 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
             }
 
             toggleSettings() {
+                const drawer = this.elements.settingsDrawer;
+                const panel = this.elements.settingsPanel;
+                
                 this.state.showSettings = !this.state.showSettings;
+                
                 if (this.state.showSettings) {
-                    this.elements.settingsPanel.classList.remove('hidden');
+                    drawer.classList.remove('hidden');
+                    // Small delay to allow display:block to apply before transition
+                    setTimeout(() => {
+                        panel.classList.remove('translate-x-full');
+                    }, 10);
                     this.elements.btnSettings.classList.add('bg-blue-100', 'text-blue-600', 'dark:bg-blue-900', 'dark:text-blue-300');
                 } else {
-                    this.elements.settingsPanel.classList.add('hidden');
+                    panel.classList.add('translate-x-full');
+                    setTimeout(() => {
+                        drawer.classList.add('hidden');
+                    }, 300); // Match transition duration
                     this.elements.btnSettings.classList.remove('bg-blue-100', 'text-blue-600', 'dark:bg-blue-900', 'dark:text-blue-300');
                 }
             }
@@ -920,8 +937,10 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                 
                 if (mode === 'view') {
                     this.parseCards();
-                    this.elements.settingsPanel.classList.add('hidden');
-                    this.state.showSettings = false;
+                    // Close settings if open
+                    if (this.state.showSettings) {
+                        this.toggleSettings();
+                    }
                     this.elements.btnSettings.classList.remove('bg-blue-100', 'text-blue-600');
                 }
             }
@@ -978,6 +997,18 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
 
             // --- Logic Methods ---
 
+            toggleSetting(key) {
+                this.state.settings[key] = !this.state.settings[key];
+                this.saveSettings();
+                
+                // If special handling needed
+                if (key === 'pinyinTop' || key === 'pinyinPerChar' || key === 'wordColor') {
+                    this.renderCard(); // Just re-render card logic
+                }
+                
+                this.updateSettingsUI();
+            }
+
             setFontStyle(style) {
                 this.state.settings.fontStyle = style;
                 this.updateSettingsUI();
@@ -1019,15 +1050,28 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                 this.elements.inputLatinSize.value = s.latinSize;
                 this.elements.labelHanziSize.textContent = `${s.hanziSize}px`;
                 this.elements.labelLatinSize.textContent = `${s.latinSize}px`;
-                this.elements.inputPinyinTop.checked = s.pinyinTop;
-                this.elements.inputPinyinChar.checked = s.pinyinPerChar;
-                this.elements.inputWordColor.checked = s.wordColor;
 
-                if (s.pinyinPerChar) {
-                    this.elements.optionPinyinPlacement.classList.add('opacity-50', 'pointer-events-none');
-                } else {
-                    this.elements.optionPinyinPlacement.classList.remove('opacity-50', 'pointer-events-none');
-                }
+                // Update Toolbar Buttons (Active/Inactive State)
+                const updateBtnState = (btn, isActive) => {
+                    const activeClasses = ['bg-blue-600', 'text-white', 'shadow-md', 'hover:bg-blue-700', 'border-blue-600'];
+                    const inactiveClasses = ['bg-white', 'dark:bg-gray-800', 'text-gray-400', 'dark:text-gray-500', 'hover:text-gray-600', 'dark:hover:text-gray-300', 'border', 'border-gray-200', 'dark:border-gray-700'];
+                    
+                    if (isActive) {
+                        btn.classList.add(...activeClasses);
+                        btn.classList.remove(...inactiveClasses.filter(c => !activeClasses.includes(c)));
+                    } else {
+                        btn.classList.add(...inactiveClasses);
+                        btn.classList.remove(...activeClasses);
+                    }
+                };
+
+                updateBtnState(this.elements.btnToggleColor, s.wordColor);
+                updateBtnState(this.elements.btnTogglePinyinChar, s.pinyinPerChar);
+                updateBtnState(this.elements.btnTogglePinyinTop, s.pinyinTop);
+
+                // Disable logic REMOVED: All buttons are independent now.
+                this.elements.btnTogglePinyinTop.disabled = false;
+                this.elements.btnTogglePinyinTop.classList.remove('opacity-50', 'cursor-not-allowed');
 
                 // Font Style Buttons
                 const activeBtn = ['border-blue-500', 'bg-blue-50', 'text-blue-700', 'dark:bg-blue-900/30', 'dark:text-blue-300', 'dark:border-blue-700'];
@@ -1494,19 +1538,15 @@ ${vocabList}`;
                 }
 
                 // Handle Sentence-Level Pinyin Visibility
-                if (isPinyinPerChar) {
-                    this.elements.cardPinyinTop.classList.add('hidden');
-                    this.elements.blockPinyin.classList.add('hidden');
+                // cardPinyinTop (DEPRECATED): Always hide to avoid confusion
+                this.elements.cardPinyinTop.classList.add('hidden');
+
+                // Toggle visibility of the block ABOVE translation (blockPinyin) based on setting
+                if (this.state.settings.pinyinTop) {
+                    this.elements.blockPinyin.classList.remove('hidden');
+                    this.elements.cardPinyin.textContent = pinyinText;
                 } else {
-                    if (this.state.settings.pinyinTop) {
-                        this.elements.cardPinyinTop.textContent = pinyinText;
-                        this.elements.cardPinyinTop.classList.remove('hidden');
-                        this.elements.blockPinyin.classList.add('hidden');
-                    } else {
-                        this.elements.cardPinyinTop.classList.add('hidden');
-                        this.elements.blockPinyin.classList.remove('hidden');
-                        this.elements.cardPinyin.textContent = pinyinText;
-                    }
+                    this.elements.blockPinyin.classList.add('hidden');
                 }
 
                 this.elements.cardTranslation.textContent = card.translation || "";
