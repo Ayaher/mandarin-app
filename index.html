@@ -926,7 +926,7 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                 this.elements.msgContext.classList.add('hidden');
                 this.elements.loaderContext.classList.remove('hidden');
 
-                const prompt = `
+                    const prompt = `
                     Analyze this Mandarin sentence: "${currentCard.hanzi}"
                     Identify the core grammar pattern or a key vocabulary term used in it.
                     
@@ -935,7 +935,7 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                     2. HSK 3-4 (Intermediate)
                     3. HSK 5-6 (Advanced)
                     
-                    CRITICAL: Identify the key term/pattern in your generated sentences and wrap it in **double asterisks** in BOTH the Hanzi and Pinyin fields.
+                    CRITICAL: Identify the key term/pattern in your generated sentences and wrap it in **double asterisks** in Hanzi, Pinyin, AND Translation fields.
                     
                     Return ONLY a JSON object with this exact structure:
                     {
@@ -995,12 +995,13 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                     // Convert **text** to span with class for both Hanzi and Pinyin
                     const htmlHanzi = item.hanzi.replace(/\*\*(.*?)\*\*/g, '<span class="highlight-term">$1</span>');
                     const htmlPinyin = item.pinyin.replace(/\*\*(.*?)\*\*/g, '<span class="highlight-term">$1</span>');
+                    const htmlTranslation = item.translation.replace(/\*\*(.*?)\*\*/g, '<span class="highlight-term">$1</span>');
                     
                     return `
                         <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
                             <p class="text-lg text-gray-800 dark:text-gray-100 mb-1 font-hanzi-sans">${htmlHanzi}</p>
                             <p class="text-sm text-gray-500 dark:text-gray-400 mb-1 font-medium">${htmlPinyin}</p>
-                            <p class="text-sm text-gray-600 dark:text-gray-300 italic">${item.translation}</p>
+                            <p class="text-sm text-gray-600 dark:text-gray-300 italic">${htmlTranslation}</p>
                         </div>
                     `;
                 }).join('');
