@@ -497,12 +497,25 @@
                         
                                 <div id="container-context" class="hidden mt-6 space-y-6 animate-in slide-in-from-top-2 duration-300">
                                     <!-- Controls -->
-                                    <div class="flex items-center gap-3 text-xs">
-                                        <span class="text-gray-400 font-medium uppercase tracking-wider">Difficulty:</span>
+                                    <div class="flex flex-wrap items-center gap-3 text-xs">
+                                        <!-- Simple Version Button -->
                                         <div class="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
-                                            <button onclick="app.setContextLevel('HSK 1-2')" class="px-3 py-1.5 rounded-md transition-all font-medium hover:bg-white dark:hover:bg-gray-700 hover:shadow-sm" id="btn-hsk-1">HSK 1-2</button>
-                                            <button onclick="app.setContextLevel('HSK 3-4')" class="px-3 py-1.5 rounded-md transition-all font-medium hover:bg-white dark:hover:bg-gray-700 hover:shadow-sm" id="btn-hsk-3">HSK 3-4</button>
-                                            <button onclick="app.setContextLevel('HSK 5-6')" class="px-3 py-1.5 rounded-md transition-all font-medium hover:bg-white dark:hover:bg-gray-700 hover:shadow-sm" id="btn-hsk-5">HSK 5-6</button>
+                                            <button onclick="app.setContextLevel('Simple')" class="px-3 py-1.5 rounded-md transition-all font-medium flex items-center gap-2" id="btn-simple">
+                                                <i data-lucide="message-circle" class="w-3 h-3"></i>
+                                                In Other Words
+                                            </button>
+                                        </div>
+
+                                        <div class="w-px h-6 bg-gray-200 dark:bg-gray-700 hidden sm:block"></div>
+
+                                        <!-- HSK Levels -->
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-gray-400 font-medium uppercase tracking-wider hidden sm:inline">Examples:</span>
+                                            <div class="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
+                                                <button onclick="app.setContextLevel('HSK 1-2')" class="px-3 py-1.5 rounded-md transition-all font-medium hover:bg-white dark:hover:bg-gray-700 hover:shadow-sm" id="btn-hsk-1">HSK 1-2</button>
+                                                <button onclick="app.setContextLevel('HSK 3-4')" class="px-3 py-1.5 rounded-md transition-all font-medium hover:bg-white dark:hover:bg-gray-700 hover:shadow-sm" id="btn-hsk-3">HSK 3-4</button>
+                                                <button onclick="app.setContextLevel('HSK 5-6')" class="px-3 py-1.5 rounded-md transition-all font-medium hover:bg-white dark:hover:bg-gray-700 hover:shadow-sm" id="btn-hsk-5">HSK 5-6</button>
+                                            </div>
                                         </div>
                                     </div>
                         
@@ -701,6 +714,7 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                     btnHsk1: document.getElementById('btn-hsk-1'),
                     btnHsk3: document.getElementById('btn-hsk-3'),
                     btnHsk5: document.getElementById('btn-hsk-5'),
+                    btnSimple: document.getElementById('btn-simple'), // New Button
 
                     // About Elements
                     btnAbout: document.getElementById('btn-about'),
@@ -861,7 +875,13 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                 if (this.state.contextLevel === level) return;
                 this.state.contextLevel = level;
                 this.updateContextUI();
-                this.checkAndGenerateContext();
+                this.checkAndGenerateContext(); // Logic handles if data exists
+                
+                // If switching to simple and data exists but no logic triggered re-render, force it
+                const cardIndex = this.state.currentIndex;
+                if (this.state.contextData[cardIndex]) {
+                     this.renderContextList(this.state.contextData[cardIndex]);
+                }
             }
 
             updateContextUI() {
@@ -886,6 +906,16 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                 const activeClass = ['bg-indigo-600', 'text-white', 'shadow-md'];
                 const inactiveClass = ['text-gray-600', 'dark:text-gray-400', 'hover:bg-white', 'dark:hover:bg-gray-700'];
 
+                // Handle Simple Button
+                if (level === 'Simple') {
+                    this.elements.btnSimple.classList.add(...activeClass);
+                    this.elements.btnSimple.classList.remove('text-gray-600', 'dark:text-gray-400', 'hover:bg-white');
+                } else {
+                    this.elements.btnSimple.classList.remove(...activeClass);
+                    this.elements.btnSimple.classList.add('text-gray-600', 'dark:text-gray-400', 'hover:bg-white');
+                }
+
+                // Handle HSK Buttons
                 btns.forEach((btn, idx) => {
                     if (levels[idx] === level) {
                         btn.classList.add(...activeClass);
@@ -926,19 +956,22 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                 this.elements.msgContext.classList.add('hidden');
                 this.elements.loaderContext.classList.remove('hidden');
 
-                    const prompt = `
+                const prompt = `
                     Analyze this Mandarin sentence: "${currentCard.hanzi}"
                     Identify the core grammar pattern or a key vocabulary term used in it.
                     
-                    Generate 2 distinct example sentences for EACH of the following difficulty levels:
-                    1. HSK 1-2 (Beginner)
-                    2. HSK 3-4 (Intermediate)
-                    3. HSK 5-6 (Advanced)
+                    Task 1: Generate a 'Simple' version. Rewrite the ORIGINAL sentence using the simplest possible vocabulary and grammar (HSK 1-2 level) while conveying the same core meaning. This is a paraphrase "in other words".
                     
-                    CRITICAL: Identify the key term/pattern in your generated sentences and wrap it in **double asterisks** in Hanzi, Pinyin, AND Translation fields.
+                    Task 2: Generate 2 distinct example sentences using the identified pattern/term for EACH of the following difficulty levels:
+                    - HSK 1-2 (Beginner)
+                    - HSK 3-4 (Intermediate)
+                    - HSK 5-6 (Advanced)
+                    
+                    CRITICAL: Identify the key term/pattern in ALL sentences (including the Simple version if preserved) and wrap it in **double asterisks** in Hanzi, Pinyin, AND Translation fields.
                     
                     Return ONLY a JSON object with this exact structure:
                     {
+                        "Simple": [ { "hanzi": "...", "pinyin": "...", "translation": "..." } ],
                         "HSK 1-2": [ { "hanzi": "...", "pinyin": "...", "translation": "..." }, { ... } ],
                         "HSK 3-4": [ ... ],
                         "HSK 5-6": [ ... ]
@@ -986,7 +1019,7 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                 if (dataForLevel.length === 0) {
                      this.elements.listContext.innerHTML = '';
                      this.elements.msgContext.classList.remove('hidden');
-                     this.elements.msgContext.textContent = "No examples available for this level.";
+                     this.elements.msgContext.textContent = "No data available for this level. Try regenerating.";
                      return;
                 }
 
@@ -1585,24 +1618,14 @@ ${vocabList}`;
                 this.elements.cardContent.classList.remove('hidden');
                 
                 // Context View Logic
-                // We do NOT clear the contextData cache here (this.state.contextData) to persist data across navigation.
-                // We only reset UI state if the section is closed, or re-render if it's open.
-                
+                // Update UI state (visibility) based on current state
+                this.updateContextUI();
+
                 if (this.state.isContextOpen) {
-                     // If open, we try to show data for the new card immediately
-                     // But usually it's better UX to close it or show loading. 
-                     // Let's check cache.
                      const cardIndex = this.state.currentIndex;
                      if (this.state.contextData[cardIndex]) {
                          this.renderContextList(this.state.contextData[cardIndex]);
                      } else {
-                         // If no data for this new card, clear the list until user explicitly requests? 
-                         // Or auto-fetch? Let's clear list and wait for interaction if we want to save tokens,
-                         // OR we can leave it blank/loading. 
-                         // For now, let's close it on new card to avoid confusion, or keep open and clear.
-                         // User asked to "keep response saved so when i go back...". This implies navigation.
-                         // Let's keep the section open state but refresh content.
-                         
                          this.elements.listContext.innerHTML = '';
                          this.checkAndGenerateContext(); // Auto-fetch if open
                      }
@@ -1811,6 +1834,7 @@ ${vocabList}`;
 
             nextCard() {
                 if (this.state.currentIndex < this.state.cards.length - 1) {
+                    this.state.isContextOpen = false; // Always collapse context on navigation
                     this.state.currentIndex++;
                     this.renderCard();
                 }
@@ -1818,6 +1842,7 @@ ${vocabList}`;
 
             prevCard() {
                 if (this.state.currentIndex > 0) {
+                    this.state.isContextOpen = false; // Always collapse context on navigation
                     this.state.currentIndex--;
                     this.renderCard();
                 }
