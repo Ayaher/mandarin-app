@@ -423,6 +423,14 @@
                             <i data-lucide="languages" class="w-5 h-5"></i>
                         </button>
                     </div>
+
+                    <!-- Quiz Mode -->
+                    <div class="group relative flex items-center">
+                        <span class="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none hidden md:block z-50">Generate Quiz</span>
+                        <button id="btn-toggle-quiz" onclick="app.toggleQuiz()" class="w-10 h-10 rounded-xl flex items-center justify-center transition-all shadow-sm bg-white dark:bg-gray-800 text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 border border-gray-200 dark:border-gray-700">
+                            <i data-lucide="file-question" class="w-5 h-5"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Main Card (Right) -->
@@ -537,6 +545,45 @@
 
                         </div>
 
+                        <!-- Quiz View -->
+                        <div id="view-quiz" class="hidden p-8 md:p-12 flex-1 overflow-y-auto flex flex-col">
+                            
+                            <!-- Header -->
+                            <div class="flex items-center justify-between mb-8 border-b border-gray-100 dark:border-gray-700 pb-6">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center text-purple-600 dark:text-purple-400">
+                                        <i data-lucide="graduation-cap" class="w-5 h-5"></i>
+                                    </div>
+                                    <div>
+                                        <h2 class="text-lg font-bold text-gray-900 dark:text-white">Knowledge Check</h2>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400">Based on current text</p>
+                                    </div>
+                                </div>
+                                <button onclick="app.toggleQuiz()" class="text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                                    Exit Quiz
+                                </button>
+                            </div>
+
+                            <!-- Loading State -->
+                            <div id="quiz-loading" class="hidden flex-1 flex flex-col items-center justify-center text-purple-600 gap-3">
+                                <i data-lucide="loader-2" class="w-8 h-8 animate-spin"></i>
+                                <div class="text-center">
+                                    <p class="font-medium text-gray-900 dark:text-white">Generating Quiz...</p>
+                                    <p class="text-xs text-gray-500 mt-1">Analyzing HSK levels & grammar points</p>
+                                </div>
+                            </div>
+
+                            <!-- Questions Container -->
+                            <div id="quiz-questions" class="hidden flex-1 flex flex-col gap-8">
+                                <!-- Injected via JS -->
+                            </div>
+
+                            <!-- Results Container -->
+                            <div id="quiz-results" class="hidden flex-1 flex flex-col items-center justify-center text-center gap-6">
+                                <!-- Injected via JS -->
+                            </div>
+                        </div>
+
                         <!-- Footer Hint -->
                         <div class="bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700 px-6 py-3 flex justify-between items-center text-xs text-gray-400">
                             <span id="footer-counter">Card 1 of 1</span>
@@ -628,6 +675,11 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                     contextLevel: 'HSK 3-4',
                     contextData: {}, // Map card index -> { "HSK 1-2": [], "HSK 3-4": [], "HSK 5-6": [] }
                     
+                    // Quiz State
+                    isQuizActive: false,
+                    quizData: JSON.parse(localStorage.getItem('hanzi_quiz_data')) || null, // Object (Global for text)
+                    userAnswers: {}, // Map questionIndex -> choiceIndex
+                    
                     darkMode: localStorage.getItem('hanzi_theme') === 'dark',
                     settings: {
                         hanziSize: parseInt(localStorage.getItem('hanzi_size_h')) || 54,
@@ -715,6 +767,13 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                     btnHsk3: document.getElementById('btn-hsk-3'),
                     btnHsk5: document.getElementById('btn-hsk-5'),
                     btnSimple: document.getElementById('btn-simple'), // New Button
+
+                    // Quiz Elements
+                    viewQuiz: document.getElementById('view-quiz'),
+                    quizLoading: document.getElementById('quiz-loading'),
+                    quizQuestions: document.getElementById('quiz-questions'),
+                    quizResults: document.getElementById('quiz-results'),
+                    btnToggleQuiz: document.getElementById('btn-toggle-quiz'),
 
                     // About Elements
                     btnAbout: document.getElementById('btn-about'),
@@ -1038,6 +1097,267 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                         </div>
                     `;
                 }).join('');
+            }
+
+            // --- Quiz Logic ---
+
+            toggleQuiz() {
+                // If turning ON
+                if (!this.state.isQuizActive) {
+                    // Check if we already have data
+                    if (!this.state.quizData) {
+                         const confirmGen = confirm("Generate a new quiz based on the entire text? This will use your Gemini API quota.");
+                         if (!confirmGen) return;
+                         
+                         this.state.isQuizActive = true;
+                         this.updateQuizButtonState();
+                         this.generateQuiz();
+                         this.renderCard(); // Triggers renderQuizUI via renderCard check
+                         return;
+                    }
+                }
+
+                this.state.isQuizActive = !this.state.isQuizActive;
+                this.updateQuizButtonState();
+                this.renderCard();
+            }
+            
+            updateQuizButtonState() {
+                const btn = this.elements.btnToggleQuiz;
+                if (this.state.isQuizActive) {
+                    btn.classList.add('bg-purple-100', 'text-purple-700', 'border-purple-200', 'dark:bg-purple-900/40', 'dark:text-purple-300', 'dark:border-purple-700');
+                    btn.classList.remove('bg-white', 'text-purple-600', 'border-gray-200', 'dark:bg-gray-800', 'dark:text-purple-400', 'dark:border-gray-700');
+                } else {
+                    btn.classList.remove('bg-purple-100', 'text-purple-700', 'border-purple-200', 'dark:bg-purple-900/40', 'dark:text-purple-300', 'dark:border-purple-700');
+                    btn.classList.add('bg-white', 'text-purple-600', 'border-gray-200', 'dark:bg-gray-800', 'dark:text-purple-400', 'dark:border-gray-700');
+                }
+            }
+
+            async generateQuiz() {
+                 const apiKey = this.state.settings.geminiApiKey;
+                 if (!apiKey) {
+                     this.state.isQuizActive = false;
+                     this.updateQuizButtonState();
+                     this.toggleGemini();
+                     alert("Please set your Gemini API Key in settings first.");
+                     this.renderCard();
+                     return;
+                 }
+
+                 // Collect FULL Text (only Hanzi parts)
+                 const fullText = this.state.cards.map((c, i) => `Card ${i+1}: ${c.hanzi}`).join('\n\n');
+                 
+                 // Show Loading
+                 this.elements.quizLoading.classList.remove('hidden');
+                 this.elements.quizQuestions.classList.add('hidden');
+                 this.elements.quizResults.classList.add('hidden');
+
+                 const prompt = `
+I am providing a Mandarin Chinese text below. Please generate a 5-question multiple-choice quiz based on this ENTIRE text.
+
+Specific Requirements:
+Difficulty: Aim for HSK 4/5 level proficiency.
+Question Mix: Include one main idea question, two vocabulary questions focused on the main topic, and two grammar questions focusing on specific particles/connectives found in the text.
+Format: Each question must have four options (A, B, C, D).
+Language: Provide the questions and options in Simplified Chinese.
+Answer Key: Include the correct answer index (0-3) and a brief explanation in English.
+
+Text:
+"${fullText}"
+
+Return ONLY a JSON object with this structure:
+{
+  "questions": [
+    {
+      "question": "Question text in Simplified Chinese",
+      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "correctIndex": 0,
+      "explanation": "English explanation."
+    }
+  ]
+}
+`;
+                const model = "gemini-3-flash-preview";
+
+                try {
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: prompt }] }],
+                            generationConfig: { responseMimeType: "application/json" }
+                        })
+                    });
+
+                    if (!response.ok) throw new Error("API request failed");
+
+                    const data = await response.json();
+                    const jsonText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                    const parsed = JSON.parse(jsonText);
+
+                    // Cache Global
+                    this.state.quizData = parsed;
+                    localStorage.setItem('hanzi_quiz_data', JSON.stringify(this.state.quizData));
+                    
+                    // Reset user answers
+                    this.state.userAnswers = {};
+                    
+                    this.renderQuizUI();
+
+                } catch (error) {
+                    console.error(error);
+                    alert("Failed to generate quiz. Please try again.");
+                    this.state.isQuizActive = false;
+                    this.updateQuizButtonState();
+                    this.renderCard();
+                }
+            }
+
+            renderQuizUI() {
+                const data = this.state.quizData;
+                const answers = this.state.userAnswers;
+                
+                if (!data) {
+                    return; 
+                }
+
+                this.elements.quizLoading.classList.add('hidden');
+
+                // Check if all questions answered
+                const totalQuestions = data.questions.length;
+                const answeredCount = Object.keys(answers).length;
+                const isComplete = answeredCount === totalQuestions;
+
+                if (isComplete) {
+                     this.renderQuizResults(data, answers);
+                } else {
+                     this.renderQuizQuestions(data, answers);
+                }
+            }
+
+            renderQuizQuestions(data, answers) {
+                this.elements.quizQuestions.classList.remove('hidden');
+                this.elements.quizResults.classList.add('hidden');
+                
+                this.elements.quizQuestions.innerHTML = data.questions.map((q, qIdx) => {
+                    const selected = answers[qIdx];
+                    
+                    return `
+                        <div class="space-y-4">
+                            <h3 class="font-bold text-gray-900 dark:text-white text-lg font-hanzi-sans">
+                                ${qIdx + 1}. ${q.question}
+                            </h3>
+                            <div class="space-y-2">
+                                ${q.options.map((opt, oIdx) => {
+                                    const isSelected = selected === oIdx;
+                                    const baseClass = "w-full text-left p-4 rounded-xl border transition-all flex items-center gap-3";
+                                    const stateClass = isSelected 
+                                        ? "border-purple-500 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 ring-1 ring-purple-500"
+                                        : "border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300";
+                                    
+                                    return `
+                                        <button onclick="app.handleQuizOption(${qIdx}, ${oIdx})" class="${baseClass} ${stateClass}">
+                                            <div class="w-6 h-6 rounded-full border border-current flex items-center justify-center text-xs font-bold shrink-0">
+                                                ${String.fromCharCode(65 + oIdx)}
+                                            </div>
+                                            <span class="font-hanzi-sans">${opt}</span>
+                                        </button>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            
+            handleQuizOption(qIdx, oIdx) {
+                this.state.userAnswers[qIdx] = oIdx;
+                this.renderQuizUI();
+            }
+
+            renderQuizResults(data, answers) {
+                this.elements.quizQuestions.classList.add('hidden');
+                this.elements.quizResults.classList.remove('hidden');
+
+                let score = 0;
+                let reviewHtml = data.questions.map((q, qIdx) => {
+                    const selected = answers[qIdx];
+                    const isCorrect = selected === q.correctIndex;
+                    if (isCorrect) score++;
+
+                    return `
+                        <div class="w-full text-left bg-white dark:bg-gray-800 border ${isCorrect ? 'border-green-200 dark:border-green-900/50' : 'border-red-200 dark:border-red-900/50'} rounded-xl p-6 shadow-sm">
+                             <div class="flex items-start justify-between gap-4 mb-4">
+                                <h4 class="font-bold text-gray-900 dark:text-white font-hanzi-sans text-lg">${qIdx + 1}. ${q.question}</h4>
+                                <span class="shrink-0 px-3 py-1 rounded-full text-xs font-bold ${isCorrect ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'}">
+                                    ${isCorrect ? 'Correct' : 'Incorrect'}
+                                </span>
+                             </div>
+                             
+                             <div class="space-y-2 mb-4">
+                                ${q.options.map((opt, oIdx) => {
+                                    let cls = "p-3 rounded-lg text-sm border flex items-center justify-between ";
+                                    if (oIdx === q.correctIndex) {
+                                        cls += "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200 font-medium";
+                                    } else if (oIdx === selected && !isCorrect) {
+                                        cls += "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 line-through opacity-75";
+                                    } else {
+                                        cls += "bg-gray-50 dark:bg-gray-800 border-transparent text-gray-500 dark:text-gray-400 opacity-60";
+                                    }
+                                    
+                                    return `<div class="${cls}">
+                                        <span class="font-hanzi-sans">${String.fromCharCode(65 + oIdx)}. ${opt}</span>
+                                        ${oIdx === q.correctIndex ? '<i data-lucide="check" class="w-4 h-4"></i>' : ''}
+                                        ${oIdx === selected && !isCorrect ? '<i data-lucide="x" class="w-4 h-4"></i>' : ''}
+                                    </div>`;
+                                }).join('')}
+                             </div>
+
+                             <div class="text-sm bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 p-4 rounded-lg leading-relaxed text-left">
+                                <span class="font-bold block mb-1 text-xs uppercase tracking-wider opacity-70">Explanation</span>
+                                ${q.explanation}
+                             </div>
+                        </div>
+                    `;
+                }).join('');
+
+                this.elements.quizResults.innerHTML = `
+                    <div class="flex flex-col items-center mb-8">
+                        <div class="w-24 h-24 rounded-full flex items-center justify-center text-4xl font-bold mb-4 ${score === data.questions.length ? 'bg-yellow-100 text-yellow-600' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}">
+                            ${Math.round((score / data.questions.length) * 100)}%
+                        </div>
+                        <h3 class="text-xl font-bold mb-2 text-gray-900 dark:text-white">You scored ${score} out of ${data.questions.length}</h3>
+                        <p class="text-gray-500 text-sm">Review your answers below</p>
+                    </div>
+
+                    <div class="w-full space-y-6 mb-8">
+                        ${reviewHtml}
+                    </div>
+
+                    <div class="flex gap-4">
+                        <button onclick="app.retakeQuiz()" class="px-6 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 font-medium transition-colors">
+                            Retake Quiz
+                        </button>
+                         <button onclick="app.newQuiz()" class="px-6 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-medium shadow-lg shadow-purple-600/20 transition-colors flex items-center gap-2">
+                            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                            Generate New Quiz
+                        </button>
+                    </div>
+                `;
+                lucide.createIcons();
+            }
+
+            retakeQuiz() {
+               this.state.userAnswers = {};
+               this.renderQuizUI();
+            }
+
+            newQuiz() {
+                if (confirm("Generate a new quiz? This will use your Gemini API quota.")) {
+                    this.state.quizData = null;
+                    localStorage.setItem('hanzi_quiz_data', null);
+                    this.generateQuiz();
+                }
             }
 
             // --- UI Updates ---
@@ -1615,7 +1935,18 @@ ${vocabList}`;
                 }
 
                 this.elements.emptyState.classList.add('hidden');
-                this.elements.cardContent.classList.remove('hidden');
+                
+                // Handle Quiz Mode Visibility
+                if (this.state.isQuizActive) {
+                    this.elements.cardContent.classList.add('hidden');
+                    this.elements.viewQuiz.classList.remove('hidden');
+                    this.renderQuizUI(); // Delegate to quiz renderer
+                    this.updateProgress();
+                    return; // Skip regular card rendering
+                } else {
+                    this.elements.cardContent.classList.remove('hidden');
+                    this.elements.viewQuiz.classList.add('hidden');
+                }
                 
                 // Context View Logic
                 // Update UI state (visibility) based on current state
