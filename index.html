@@ -87,6 +87,30 @@
         .dark .highlight-term {
             color: #60a5fa; /* blue-400 */
         }
+
+        /* Custom Dialog Animations */
+        #custom-dialog.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        #custom-dialog:not(.hidden) {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        #custom-dialog .absolute.top-1\/2 {
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        
+        #custom-dialog.hidden .absolute.top-1\/2 {
+            opacity: 0;
+            transform: translate(-50%, -40%) scale(0.95);
+        }
+        
+        #custom-dialog:not(.hidden) .absolute.top-1\/2 {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 transition-theme min-h-screen flex flex-col font-sans overflow-x-hidden">
@@ -319,6 +343,39 @@
                         API key used for both <strong>Text Generation</strong> (Study Material, Context Examples) and <strong>Text-to-Speech</strong>. Ensure your key has access to Generative Language API.
                     </p>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Dialog Modal -->
+    <div id="custom-dialog" class="fixed inset-0 z-[200] hidden">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity"></div>
+        
+        <!-- Dialog Box -->
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700 transform transition-all scale-100 p-6 flex flex-col gap-4">
+            
+            <!-- Icon & Title -->
+            <div class="flex items-center gap-3">
+                <div id="dialog-icon-container" class="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                    <i id="dialog-icon" data-lucide="info" class="w-5 h-5"></i>
+                </div>
+                <h3 id="dialog-title" class="text-lg font-bold text-gray-900 dark:text-white">Notification</h3>
+            </div>
+
+            <!-- Message -->
+            <p id="dialog-message" class="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">
+                Message goes here...
+            </p>
+
+            <!-- Actions -->
+            <div id="dialog-actions" class="flex justify-end gap-3 mt-2">
+                <button id="btn-dialog-cancel" class="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors hidden">
+                    Cancel
+                </button>
+                <button id="btn-dialog-confirm" class="px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20 transition-colors">
+                    OK
+                </button>
             </div>
         </div>
     </div>
@@ -898,6 +955,15 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                     strokePopup: document.getElementById('stroke-popup'),
                     strokeTarget: document.getElementById('stroke-target'),
                     strokeLoading: document.getElementById('stroke-loading'),
+
+                    // Custom Dialog
+                    dialog: document.getElementById('custom-dialog'),
+                    dialogTitle: document.getElementById('dialog-title'),
+                    dialogMessage: document.getElementById('dialog-message'),
+                    dialogIcon: document.getElementById('dialog-icon'),
+                    dialogIconContainer: document.getElementById('dialog-icon-container'),
+                    btnDialogConfirm: document.getElementById('btn-dialog-confirm'),
+                    btnDialogCancel: document.getElementById('btn-dialog-cancel'),
                 };
 
                 this.init();
@@ -1245,7 +1311,7 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                      this.state.isQuizActive = false;
                      this.updateQuizButtonState();
                      this.toggleGemini();
-                     alert("Please set your Gemini API Key in settings first.");
+                     await this.showAlert("Please set your Gemini API Key in settings first.", "API Key Required");
                      this.renderCard();
                      return;
                  }
@@ -1312,7 +1378,7 @@ Return ONLY a JSON object with this structure:
 
                 } catch (error) {
                     console.error(error);
-                    alert("Failed to generate quiz. Please try again.");
+                    await this.showAlert("Failed to generate quiz. Please try again.", "Error");
                     this.state.isQuizActive = false;
                     this.updateQuizButtonState();
                     this.renderCard();
@@ -1500,7 +1566,7 @@ Return ONLY a JSON object with this structure:
                      this.state.isWritingActive = false;
                      this.updateWritingButtonState();
                      this.toggleGemini();
-                     alert("Please set your Gemini API Key in settings first.");
+                     await this.showAlert("Please set your Gemini API Key in settings first.", "API Key Required");
                      this.renderCard();
                      return;
                  }
@@ -1573,7 +1639,7 @@ ${fullText}
                     this.renderWritingUI();
                 } catch (e) {
                     console.error(e);
-                    alert("Failed to generate writing prompt. Please try again.");
+                    await this.showAlert("Failed to generate writing prompt. Please try again.", "Error");
                     this.state.isWritingActive = false;
                     this.updateWritingButtonState();
                     this.renderCard();
@@ -1582,7 +1648,7 @@ ${fullText}
 
             async submitWriting() {
                 const userText = this.elements.writingInput.value.trim();
-                if (!userText) return alert("Please write something first.");
+                if (!userText) return this.showAlert("Please write something first.", "Input Required");
 
                 const apiKey = this.state.settings.geminiApiKey;
                  
@@ -1658,7 +1724,7 @@ ${userText}
 
                 } catch (e) {
                     console.error(e);
-                    alert("Evaluation failed.");
+                    await this.showAlert("Evaluation failed.", "Error");
                     this.elements.writingEvalLoading.classList.add('hidden');
                     this.elements.writingAssignment.classList.remove('hidden');
                 }
@@ -1748,8 +1814,8 @@ ${userText}
                 this.generateWritingPrompt();
             }
 
-            newQuiz() {
-                if (confirm("Generate a new quiz? This will use your Gemini API quota.")) {
+            async newQuiz() {
+                if (await this.showConfirm("Generate a new quiz? This will use your Gemini API quota.")) {
                     this.state.quizData = null;
                     localStorage.setItem('hanzi_quiz_data', null);
                     this.generateQuiz();
@@ -2041,11 +2107,11 @@ ${userText}
 
                 if (!apiKey) {
                     this.toggleGemini();
-                    alert("Please set your Gemini API Key in settings first.");
+                    await this.showAlert("Please set your Gemini API Key in settings first.", "API Key Required");
                     return;
                 }
                 if (!text) {
-                    alert("Please enter text to process.");
+                    await this.showAlert("Please enter text to process.", "Input Required");
                     return;
                 }
 
@@ -2092,7 +2158,7 @@ ${userText}
 
                 } catch (error) {
                     console.error(error);
-                    alert("Failed to generate content: " + error.message);
+                    await this.showAlert("Failed to generate content: " + error.message, "Error");
                 } finally {
                     this.elements.btnGenerateAi.disabled = false;
                     this.elements.iconGenerate.setAttribute('data-lucide', 'sparkles');
@@ -2142,7 +2208,7 @@ ${vocabList}`;
                 const apiKey = this.state.settings.geminiApiKey;
                 if (!apiKey) {
                     this.toggleGemini();
-                    alert("Please enter your Gemini API Key in the settings.");
+                    await this.showAlert("Please enter your Gemini API Key in the settings.", "API Key Required");
                     return;
                 }
 
@@ -2224,7 +2290,7 @@ ${vocabList}`;
 
                 } catch (error) {
                     console.error("TTS Error:", error);
-                    alert("Error generating audio: " + error.message);
+                    await this.showAlert("Error generating audio: " + error.message, "Audio Error");
                 } finally {
                     this.elements.btnPlayAudio.disabled = false;
                     this.elements.iconPlay.setAttribute('data-lucide', 'volume-2');
@@ -2594,6 +2660,71 @@ ${vocabList}`;
                     this.state.currentIndex--;
                     this.renderCard();
                 }
+            }
+
+            // --- Custom Dialog System ---
+
+            showAlert(message, title = "Notification") {
+                return this.showDialog("alert", message, title);
+            }
+            
+            showConfirm(message, title = "Confirmation") {
+                return this.showDialog("confirm", message, title);
+            }
+
+            showDialog(type, message, title) {
+                return new Promise((resolve) => {
+                    const { dialog, dialogTitle, dialogMessage, dialogIcon, dialogIconContainer, btnDialogConfirm, btnDialogCancel } = this.elements;
+                    
+                    dialogTitle.textContent = title;
+                    dialogMessage.textContent = message;
+                    
+                    // Reset Button Listeners (Clone to remove old listeners)
+                    const newConfirm = btnDialogConfirm.cloneNode(true);
+                    btnDialogConfirm.parentNode.replaceChild(newConfirm, btnDialogConfirm);
+                    this.elements.btnDialogConfirm = newConfirm;
+
+                    const newCancel = btnDialogCancel.cloneNode(true);
+                    btnDialogCancel.parentNode.replaceChild(newCancel, btnDialogCancel);
+                    this.elements.btnDialogCancel = newCancel;
+                    
+                    // Setup UI based on Type
+                    if (type === "confirm") {
+                        dialogIcon.setAttribute('data-lucide', 'help-circle');
+                        dialogIconContainer.className = "w-10 h-10 rounded-full bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center text-purple-600 dark:text-purple-400";
+                        this.elements.btnDialogCancel.classList.remove('hidden');
+                        this.elements.btnDialogConfirm.textContent = "Confirm";
+                        this.elements.btnDialogConfirm.className = "px-4 py-2 rounded-lg text-sm font-medium bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-600/20 transition-colors";
+                    } else {
+                        dialogIcon.setAttribute('data-lucide', 'info');
+                        dialogIconContainer.className = "w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400";
+                        this.elements.btnDialogCancel.classList.add('hidden');
+                        this.elements.btnDialogConfirm.textContent = "OK";
+                        this.elements.btnDialogConfirm.className = "px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20 transition-colors";
+                    }
+                    lucide.createIcons();
+
+                    // Show Dialog
+                    dialog.classList.remove('hidden');
+
+                    // Animation (Add class for transition entry)
+                    requestAnimationFrame(() => {
+                         dialog.querySelector('.absolute.top-1\\/2').style.transform = 'translate(-50%, -50%) scale(1)';
+                         dialog.querySelector('.absolute.top-1\\/2').style.opacity = '1';
+                    });
+
+                    // Handlers
+                    const close = (result) => {
+                        dialog.classList.add('hidden');
+                         // Reset Animation State
+                        dialog.querySelector('.absolute.top-1\\/2').style.transform = 'translate(-50%, -40%) scale(0.95)';
+                        dialog.querySelector('.absolute.top-1\\/2').style.opacity = '0';
+                        resolve(result);
+                    };
+
+                    this.elements.btnDialogConfirm.onclick = () => close(true);
+                    this.elements.btnDialogCancel.onclick = () => close(false);
+                });
             }
         }
 
