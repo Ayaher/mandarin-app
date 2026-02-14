@@ -909,10 +909,10 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                 // Handle Simple Button
                 if (level === 'Simple') {
                     this.elements.btnSimple.classList.add(...activeClass);
-                    this.elements.btnSimple.classList.remove('text-gray-600', 'dark:text-gray-400', 'hover:bg-white');
+                    this.elements.btnSimple.classList.remove(...inactiveClass);
                 } else {
                     this.elements.btnSimple.classList.remove(...activeClass);
-                    this.elements.btnSimple.classList.add('text-gray-600', 'dark:text-gray-400', 'hover:bg-white');
+                    this.elements.btnSimple.classList.add(...inactiveClass);
                 }
 
                 // Handle HSK Buttons
