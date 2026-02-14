@@ -722,7 +722,10 @@
 
                                 <!-- Input Area -->
                                 <div class="flex-1 flex flex-col gap-2">
-                                    <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Your Response</label>
+                                    <div class="flex justify-between items-center">
+                                        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Your Response</label>
+                                        <span id="char-count" class="text-xs text-gray-500 dark:text-gray-400">0 characters</span>
+                                    </div>
                                     <textarea id="writing-input" class="w-full h-48 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-shadow font-hanzi-sans resize-none" placeholder="Start writing here..."></textarea>
                                     <div class="flex justify-end">
                                         <button onclick="app.submitWriting()" class="px-6 py-2.5 rounded-lg bg-pink-600 hover:bg-pink-700 text-white font-medium shadow-lg shadow-pink-600/20 transition-all flex items-center gap-2">
@@ -968,6 +971,7 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                     writingPromptEn: document.getElementById('writing-prompt-en'),
                     writingRequirements: document.getElementById('writing-requirements'),
                     writingInput: document.getElementById('writing-input'),
+                    writingInputCharCount: document.getElementById('char-count'),
 
                     // About Elements
                     btnAbout: document.getElementById('btn-about'),
@@ -1080,6 +1084,12 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                     const count = e.target.value.length;
                     this.elements.aiCharCount.textContent = `${count}/1000`;
                     this.elements.btnGenerateAi.disabled = count === 0 || count > 1000;
+                });
+
+                // Writing Input Character Counter
+                this.elements.writingInput.addEventListener('input', (e) => {
+                    const count = e.target.value.length;
+                    this.elements.writingInputCharCount.textContent = `${count} characters`;
                 });
 
                 // Keyboard Navigation
@@ -1850,6 +1860,10 @@ ${userText}
                     this.elements.writingPromptZh.textContent = data.prompt_zh;
                     this.elements.writingPromptEn.textContent = data.prompt_en;
                     this.elements.writingRequirements.innerHTML = data.requirements.map(r => `<li>${r}</li>`).join('');
+                    
+                    // Update Character Count
+                    const count = this.elements.writingInput.value.length;
+                    this.elements.writingInputCharCount.textContent = `${count} characters`;
                 }
             }
 
