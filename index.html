@@ -2935,8 +2935,31 @@ ${userText}
 
             checkUnsavedChanges() {
                 if (!this.state.lastSavedSnapshot) return true; // Treat as unsaved until proven otherwise (e.g. loaded/saved)
+                
+                // Helper to remove transient fields that shouldn't trigger "Unsaved" warning
+                const normalize = (jsonStr) => {
+                    try {
+                        const obj = JSON.parse(jsonStr);
+                        if (obj.library) {
+                            obj.library.forEach(item => {
+                                delete item.lastOpened;
+                                // Handle potential undefined vs empty/null mismatches for optional fields
+                                if (item.writingDraft === "" && !item.writingDraft) delete item.writingDraft;
+                                if (item.quizData === null) delete item.quizData;
+                                if (item.writingData === null) delete item.writingData;
+                                if (item.writingResult === null) delete item.writingResult;
+                                // contextData defaults to {} in openText, check empty object?
+                                if (item.contextData && Object.keys(item.contextData).length === 0) delete item.contextData;
+                            });
+                        }
+                        return JSON.stringify(obj);
+                    } catch (e) {
+                        return jsonStr;
+                    }
+                };
+
                 const currentSnapshot = JSON.stringify(this.getSyncPayload());
-                return currentSnapshot !== this.state.lastSavedSnapshot;
+                return normalize(currentSnapshot) !== normalize(this.state.lastSavedSnapshot);
             }
 
             updateSyncUI() {
