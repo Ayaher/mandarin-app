@@ -130,20 +130,14 @@
         <div class="flex items-center gap-2">
             <!-- Mode Switcher -->
             <div class="hidden md:flex bg-gray-100 dark:bg-gray-800 p-1 rounded-lg mr-2">
-                <button id="btn-mode-view" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all" onclick="app.setMode('view')">
-                    <i data-lucide="book-open" class="w-4 h-4"></i> Study
-                </button>
-                <button id="btn-mode-ai" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all" onclick="app.setMode('ai')">
-                    <i data-lucide="wand-2" class="w-4 h-4"></i> AI Input
-                </button>
-                <button id="btn-mode-input" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all" onclick="app.setMode('input')">
-                    <i data-lucide="edit-3" class="w-4 h-4"></i> Input
+                <button id="btn-mode-library" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all" onclick="app.setMode('library')">
+                    <i data-lucide="library" class="w-4 h-4"></i> Library
                 </button>
             </div>
             
             <!-- Mobile Mode Switcher (Icon only) -->
-            <button id="btn-mode-mobile" class="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800" onclick="app.toggleMode()">
-                <i id="icon-mode-mobile" data-lucide="edit-3" class="w-5 h-5 text-gray-600 dark:text-gray-400"></i>
+            <button id="btn-mode-mobile" class="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800" onclick="app.setMode('library')">
+                <i id="icon-mode-mobile" data-lucide="library" class="w-5 h-5 text-gray-600 dark:text-gray-400"></i>
             </button>
 
             <!-- Theme Toggle -->
@@ -425,6 +419,33 @@
     <!-- Main Content -->
     <main class="flex-1 max-w-5xl mx-auto w-full p-4 md:p-6 lg:p-8 flex flex-col overflow-hidden relative">
         
+        <!-- Library View -->
+        <div id="view-library" class="flex-1 flex flex-col w-full h-full animate-in fade-in duration-300 overflow-y-auto hidden">
+             <div class="flex items-center justify-between mb-8 sticky top-0 bg-gray-50 dark:bg-gray-900 z-10 py-2">
+                <div>
+                    <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">My Library</h2>
+                    <p class="text-gray-500 dark:text-gray-400">Manage your study texts</p>
+                </div>
+                <button onclick="app.showCreateTextDialog()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-600/20 flex items-center gap-2 transition-all active:scale-95">
+                    <i data-lucide="plus" class="w-5 h-5"></i>
+                    <span class="hidden sm:inline">New Text</span>
+                </button>
+            </div>
+            
+            <div id="library-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20">
+                <!-- Library Items Injected Here -->
+            </div>
+            
+            <div id="library-empty" class="hidden flex flex-col items-center justify-center py-20 text-center">
+                <div class="w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
+                    <i data-lucide="book" class="w-10 h-10 text-gray-400"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Library is empty</h3>
+                <p class="text-gray-500 dark:text-gray-400 max-w-sm mx-auto mb-6">Create your first study text to get started.</p>
+                <button onclick="app.showCreateTextDialog()" class="text-blue-600 font-medium hover:underline">Create Text</button>
+            </div>
+        </div>
+
         <!-- Input View -->
         <div id="view-input" class="hidden flex-1 flex flex-col h-full animate-in fade-in duration-300">
             <div class="mb-4 text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
@@ -888,28 +909,37 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                     isSaving: false,
                     autosaveTimer: null,
                     
-                    mode: 'view', // 'view', 'input', 'ai'
-                    text: localStorage.getItem('hanzi_text') || DEFAULT_TEXT,
+                    // Library State
+                    mode: 'library', // 'library', 'view', 'input', 'ai' (input/ai are now sub-states or dialogs mostly)
+                    library: [], // Array of { id, title, content, quizData, writingData, writingResult, contextData, lastOpened }
+                    activeTextId: null,
+
+                    // Active Text Session Buffers (Loaded from Library)
+                    text: DEFAULT_TEXT, 
                     cards: [],
-                    currentIndex: 0,
+                    currentIndex: 0, 
+
                     showSettings: false,
                     showAbout: false,
                     showGemini: false,
+                    showCreateText: false,
+                    createMode: 'manual', // 'manual', 'ai'
                     aboutTab: 'app',
-                    // Contextual Examples State
+                    
+                    // Contextual Examples State (Active)
                     isContextOpen: false,
                     contextLevel: 'HSK 3-4',
-                    contextData: {}, // Map card index -> { "HSK 1-2": [], "HSK 3-4": [], "HSK 5-6": [] }
+                    contextData: {}, 
                     
-                    // Quiz State
+                    // Quiz State (Active)
                     isQuizActive: false,
-                    quizData: JSON.parse(localStorage.getItem('hanzi_quiz_data')) || null, // Object (Global for text)
-                    userAnswers: {}, // Map questionIndex -> choiceIndex
+                    quizData: null,
+                    userAnswers: {},
                     
-                    // Writing State
+                    // Writing State (Active)
                     isWritingActive: false,
-                    writingData: JSON.parse(localStorage.getItem('hanzi_writing_data')) || null,
-                    writingResult: JSON.parse(localStorage.getItem('hanzi_writing_result')) || null,
+                    writingData: null,
+                    writingResult: null,
                     
                     darkMode: localStorage.getItem('hanzi_theme') === 'dark',
                     settings: {
@@ -937,6 +967,26 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                 // DOM Elements
                 this.elements = {
                     app: document.body,
+                    
+                    // Library Elements
+                    viewLibrary: document.getElementById('view-library'),
+                    libraryList: document.getElementById('library-list'),
+                    libraryEmpty: document.getElementById('library-empty'),
+                    btnModeLibrary: document.getElementById('btn-mode-library'), // New btn
+                    
+                    // Create Text Elements
+                    dialogCreateText: document.getElementById('dialog-create-text'),
+                    inputCreateTitle: document.getElementById('input-create-title'),
+                    inputCreateContent: document.getElementById('input-create-content'),
+                    inputCreateAiPrompt: document.getElementById('input-create-ai-prompt'),
+                    btnCreateManual: document.getElementById('btn-create-manual'),
+                    btnCreateAi: document.getElementById('btn-create-ai'),
+                    containerCreateManual: document.getElementById('container-create-manual'),
+                    containerCreateAi: document.getElementById('container-create-ai'),
+                    createAiCharCount: document.getElementById('create-ai-char-count'),
+                    btnCreateSubmit: document.getElementById('btn-create-submit'),
+                    labelCreateSubmit: document.getElementById('label-create-submit'),
+
                     markdownInput: document.getElementById('markdown-input'),
                     viewInput: document.getElementById('view-input'),
                     viewStudy: document.getElementById('view-study'),
@@ -1085,9 +1135,9 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                     this.state.segmenter = new Intl.Segmenter('zh-CN', { granularity: 'word' });
                 }
 
-                // Initial parsing
-                this.parseCards();
-                
+                // 1. Load Library from Memory
+                this.loadLocalLibrary(); 
+
                 // Theme Init
                 if (this.state.darkMode) document.documentElement.classList.add('dark');
                 
@@ -1098,23 +1148,19 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                 this.updateModeUI();
                 this.updateSettingsUI();
                 this.updateGeminiUI();
-                this.updateContextUI(); // Init context selector state
-                this.renderCard();
+                this.updateContextUI(); 
                 
+                // If library has items, render library. If we have active Text, render it but mode decides what to show.
+                // Default mode is library now.
+                this.renderLibrary();
+
                 // Initialize Icons
                 lucide.createIcons();
                 
                 // Initial Cloud Sync Check
                 if (this.state.settings.githubToken && this.state.settings.gistId) {
-                    // Start by assuming we are synced if we have creds, to avoid immediate red dot
-                    // However, we need the snapshot to be sure.
-                    // If we don't load from cloud, we don't know the cloud state.
-                    // But if we want to avoid overwriting local changes blindly...
-                    // The user requested: "immediatly gets the app data"
-                    this.loadFromGist(true); // true = silent/initial load
+                    this.loadFromGist(true); 
                 } else {
-                    // No cloud config, so we are "locally saved" effectively, or just no sync.
-                    // If no token, updateSyncUI handles hiding the button.
                     this.updateSyncUI();
                 }
 
@@ -1125,13 +1171,60 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                 window.addEventListener('beforeunload', (e) => {
                     if (this.checkUnsavedChanges()) {
                         e.preventDefault();
-                        e.returnValue = ''; // Standard for most browsers
-                        
-                        // Try to trigger a save if possible, or at least let the user know
-                        // Note: Browsers are restrictive about what can be done here.
-                        // The default dialog will be shown.
+                        e.returnValue = ''; 
                     }
                 });
+            }
+
+            loadLocalLibrary() {
+                // Try to get library from local storage? 
+                // Wait, we are syncing FULL state via 'mandarin_app_data'.
+                // If we don't have Gist yet, we might rely on legacy localStorage items.
+                
+                // Check if we have library data in state (memory) - no, state is volatile on reload.
+                // We don't save library to localStorage in the old code, text was in 'hanzi_text'.
+                
+                // Let's see if we have migrated data in localStorage 'hanzi_library' (new key)
+                const storedLib = localStorage.getItem('hanzi_library');
+                if (storedLib) {
+                    try {
+                        this.state.library = JSON.parse(storedLib);
+                    } catch(e) { console.error("Failed to parse library", e); }
+                }
+
+                // MIGRATION: If library is empty but we have legacy 'hanzi_text', migrate it.
+                if (this.state.library.length === 0) {
+                    const legacyText = localStorage.getItem('hanzi_text');
+                    // Check if DEFAULT_TEXT is currently "stored" or if it is just a fallback.
+                    // If legacyText exists, use it. If not, maybe use DEFAULT_TEXT as a starter lesson.
+                    
+                    const content = legacyText || DEFAULT_TEXT;
+                    
+                    const legacyQuiz = JSON.parse(localStorage.getItem('hanzi_quiz_data')) || null;
+                    const legacyWriting = JSON.parse(localStorage.getItem('hanzi_writing_data')) || null;
+                    const legacyWritingRes = JSON.parse(localStorage.getItem('hanzi_writing_result')) || null;
+                    // contextData was not persisted to localStorage in old code (only in state) - wait.
+                    // I check init() old code: contextData was in state default, not loaded from LS.
+                    
+                    // Create first library item
+                    const newItem = {
+                        id: crypto.randomUUID(),
+                        title: "Initial Study Text",
+                        content: content,
+                        quizData: legacyQuiz,
+                        writingData: legacyWriting,
+                        writingResult: legacyWritingRes,
+                        contextData: {}, // Lost on reload unfortunately in old version
+                        lastOpened: Date.now()
+                    };
+                    
+                    this.state.library.push(newItem);
+                    this.saveLibraryToLocal(); // Persist new structure
+                }
+            }
+
+            saveLibraryToLocal() {
+                localStorage.setItem('hanzi_library', JSON.stringify(this.state.library));
             }
 
             initConverters() {
@@ -1197,6 +1290,294 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                     if (e.key === 'ArrowRight') this.nextCard();
                     if (e.key === 'ArrowLeft') this.prevCard();
                 });
+            }
+
+            // --- Library Management ---
+
+            renderLibrary() {
+                const list = this.elements.libraryList;
+                const empty = this.elements.libraryEmpty;
+                list.innerHTML = '';
+
+                if (this.state.library.length === 0) {
+                    empty.classList.remove('hidden');
+                    return;
+                }
+                empty.classList.add('hidden');
+
+                // Sort by last opened (desc)
+                const sorted = [...this.state.library].sort((a, b) => (b.lastOpened || 0) - (a.lastOpened || 0));
+
+                sorted.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = "bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-all border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col group cursor-pointer h-full relative";
+                    card.onclick = (e) => {
+                        // Prevent click if clicking delete
+                        if (e.target.closest('.btn-delete')) return;
+                        this.openText(item.id);
+                    };
+
+                    const preview = item.content.substring(0, 100).replace(/[*#]/g, '') + '...';
+                    const date = new Date(item.lastOpened || Date.now()).toLocaleDateString();
+
+                    card.innerHTML = `
+                        <div class="p-6 flex-1">
+                            <h3 class="font-bold text-lg text-gray-900 dark:text-white mb-2 line-clamp-1">${item.title}</h3>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 line-clamp-3 leading-relaxed">${preview}</p>
+                        </div>
+                        <div class="px-6 py-4 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-100 dark:border-gray-800 flex justify-between items-center text-xs text-gray-400">
+                            <span>Opened: ${date}</span>
+                            <button class="btn-delete p-2 rounded-lg hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 dark:hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100" onclick="app.deleteText('${item.id}')">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    `;
+                    list.appendChild(card);
+                });
+                lucide.createIcons();
+            }
+
+            openText(id) {
+                // Determine source item
+                const item = this.state.library.find(i => i.id === id);
+                if (!item) return;
+
+                // Save current Active text back to library if we were switching from another text?
+                // Ideally we autosave constantly, so the library state should be fresh.
+                // But let's make sure we flush current usage.
+                if (this.state.activeTextId && this.state.activeTextId !== id) {
+                    this.saveActiveTextToLibrary();
+                }
+
+                // Load Item into Active State
+                this.state.activeTextId = id;
+                this.state.text = item.content;
+                this.state.quizData = item.quizData || null;
+                this.state.writingData = item.writingData || null;
+                this.state.writingResult = item.writingResult || null;
+                this.state.contextData = item.contextData || {};
+                
+                // IMPORTANT: Load Progress & Reset UI Inputs
+                this.state.userAnswers = item.userAnswers || {};
+                this.elements.writingInput.value = item.writingDraft || "";
+                this.elements.writingInputCharCount.textContent = `${this.elements.writingInput.value.length} characters`;
+
+                // Update Last Opened
+                item.lastOpened = Date.now();
+                this.saveLibraryToLocal();
+
+                // Setup View Mode
+                this.elements.markdownInput.value = this.state.text;
+                this.state.isQuizActive = false;
+                this.state.isWritingActive = false;
+                
+                // Reset Quiz/Writing UI containers to prevent showing old data briefly
+                this.elements.quizQuestions.innerHTML = '';
+                this.elements.quizResults.innerHTML = '';
+                this.elements.writingResults.innerHTML = '';
+                
+                // Helper to update button states if they exist logic
+                if (this.elements.btnToggleQuiz) {
+                        this.elements.btnToggleQuiz.classList.remove('bg-purple-600', 'text-white');
+                        this.elements.btnToggleQuiz.classList.add('bg-white', 'text-purple-600');
+                }
+                if (this.elements.btnToggleWriting) {
+                    this.elements.btnToggleWriting.classList.remove('bg-pink-600', 'text-white');
+                    this.elements.btnToggleWriting.classList.add('bg-white', 'text-pink-600');
+                }
+
+                this.setMode('view');
+            }
+
+            saveActiveTextToLibrary() {
+                if (!this.state.activeTextId) return;
+                
+                const index = this.state.library.findIndex(i => i.id === this.state.activeTextId);
+                if (index === -1) return;
+
+                // Update content in library
+                this.state.library[index] = {
+                    ...this.state.library[index],
+                    content: this.state.text,
+                    quizData: this.state.quizData,
+                    userAnswers: this.state.userAnswers, // Save Quiz Progress
+                    writingData: this.state.writingData,
+                    writingResult: this.state.writingResult,
+                    writingDraft: this.elements.writingInput.value, // Save Writing Draft
+                    contextData: this.state.contextData,
+                    lastOpened: Date.now()
+                };
+                
+                this.saveLibraryToLocal();
+            }
+
+            async deleteText(id) {
+                if (await this.showConfirm("Are you sure you want to delete this text?")) {
+                    this.state.library = this.state.library.filter(i => i.id !== id);
+                    this.saveLibraryToLocal();
+                    this.renderLibrary();
+                    
+                    // If deleted active text, go back to library
+                    if (this.state.activeTextId === id) {
+                        this.state.activeTextId = null;
+                        this.setMode('library');
+                    }
+                    this.saveToGist(true); // Sync delete
+                }
+            }
+
+            // --- Create Text Logic ---
+            
+            showCreateTextDialog() {
+                this.elements.dialogCreateText.classList.remove('hidden');
+                this.elements.inputCreateTitle.value = '';
+                this.elements.inputCreateContent.value = '';
+                this.elements.inputCreateAiPrompt.value = '';
+                this.setCreateMode('manual');
+            }
+
+            hideCreateTextDialog() {
+                this.elements.dialogCreateText.classList.add('hidden');
+            }
+
+            setCreateMode(mode) {
+                this.state.createMode = mode;
+                
+                // Toggle Container Visibility
+                if (mode === 'manual') {
+                    this.elements.containerCreateManual.classList.remove('hidden');
+                    this.elements.containerCreateAi.classList.add('hidden');
+                    
+                    // Toggle Buttons
+                    this.elements.btnCreateManual.classList.add('bg-white', 'shadow-sm', 'text-blue-600', 'dark:bg-gray-700', 'dark:text-blue-300');
+                    this.elements.btnCreateManual.classList.remove('text-gray-600', 'dark:text-gray-400');
+                    
+                    this.elements.btnCreateAi.classList.remove('bg-white', 'shadow-sm', 'text-blue-600', 'dark:bg-gray-700', 'dark:text-blue-300');
+                    this.elements.btnCreateAi.classList.add('text-gray-600', 'dark:text-gray-400');
+                    
+                    this.elements.labelCreateSubmit.textContent = "Create Text";
+                } else {
+                    this.elements.containerCreateManual.classList.add('hidden');
+                    this.elements.containerCreateAi.classList.remove('hidden');
+                    
+                     // Toggle Buttons
+                    this.elements.btnCreateAi.classList.add('bg-white', 'shadow-sm', 'text-blue-600', 'dark:bg-gray-700', 'dark:text-blue-300');
+                    this.elements.btnCreateAi.classList.remove('text-gray-600', 'dark:text-gray-400');
+                    
+                    this.elements.btnCreateManual.classList.remove('bg-white', 'shadow-sm', 'text-blue-600', 'dark:bg-gray-700', 'dark:text-blue-300');
+                    this.elements.btnCreateManual.classList.add('text-gray-600', 'dark:text-gray-400');
+                    
+                    this.elements.labelCreateSubmit.textContent = "Generate with AI";
+                }
+            }
+
+            async submitCreateText() {
+                const title = this.elements.inputCreateTitle.value.trim();
+                if (!title) {
+                    this.showAlert("Please enter a title.", "Title Required");
+                    return;
+                }
+
+                let content = "";
+
+                if (this.state.createMode === 'manual') {
+                    content = this.elements.inputCreateContent.value.trim();
+                    if (!content) {
+                        this.showAlert("Please enter some text.", "Content Required");
+                        return;
+                    }
+                    this.finalizeCreateText(title, content);
+                } else {
+                    // AI Generation
+                    const promptText = this.elements.inputCreateAiPrompt.value.trim();
+                    if (!promptText) {
+                        this.showAlert("Please describe what you want to generate.", "Prompt Required");
+                        return;
+                    }
+                    
+                    await this.generateAiText(title, promptText);
+                }
+            }
+
+            async generateAiText(title, userPrompt) {
+                 const apiKey = this.state.settings.geminiApiKey;
+                 if (!apiKey) {
+                     this.toggleGemini();
+                     return this.showAlert("Please set your Gemini API Key first.", "API Key Required");
+                 }
+                 
+                 // Loading State
+                 const btn = this.elements.btnCreateSubmit;
+                 const originalContent = btn.innerHTML;
+                 btn.disabled = true;
+                 btn.innerHTML = '<i class="animate-spin" data-lucide="loader-2"></i> Generating...';
+                 lucide.createIcons();
+                 
+                 const prompt = `
+                    Generate a Mandarin Chinese study text based on this request: "${userPrompt}"
+                    
+                    Format Requirement:
+                    Use strictly the app's format:
+                    
+                    **Chinese Sentence**
+                    **Pinyin:** pinyin here
+                    **Translation:** English translation
+                    
+                    (Optional grammar explanations)
+                    
+                    ---
+                    
+                    (Next sentence...)
+                    
+                    Do not wrap in markdown code blocks. Just raw text.
+                    Keep it educational, suitable for HSK 3-5 unless specified otherwise.
+                 `;
+                 
+                 try {
+                     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: prompt }] }]
+                        })
+                    });
+
+                    if (!response.ok) throw new Error("API request failed");
+
+                    const data = await response.json();
+                    const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                    
+                    this.finalizeCreateText(title, generatedText);
+
+                 } catch (e) {
+                     console.error(e);
+                     this.showAlert("Failed to generate text.", "AI Error");
+                 } finally {
+                     btn.disabled = false;
+                     btn.innerHTML = originalContent;
+                     lucide.createIcons();
+                 }
+            }
+
+            finalizeCreateText(title, content) {
+                const newItem = {
+                    id: crypto.randomUUID(),
+                    title: title,
+                    content: content,
+                    lastOpened: Date.now(),
+                    quizData: null,
+                    userAnswers: {},
+                    writingData: null,
+                    writingDraft: "",
+                    contextData: {},
+                    writingResult: null
+                };
+                
+                this.state.library.unshift(newItem); // Add to top
+                this.saveLibraryToLocal();
+                this.hideCreateTextDialog();
+                this.openText(newItem.id);
+                this.saveToGist(true); // Auto-sync creation (silent)
             }
 
             parseCards() {
@@ -2204,73 +2585,68 @@ ${userText}
             }
 
             toggleMode() {
-                // Only for mobile icon toggle
-                const modes = ['view', 'input', 'ai'];
-                const nextIndex = (modes.indexOf(this.state.mode) + 1) % modes.length;
-                this.setMode(modes[nextIndex]);
+                // Not actively used on mobile main button anymore, but can be used to cycle sub-modes?
+                // Now mainly Library vs Study
+                if (this.state.mode === 'library') {
+                    // if (this.state.activeTextId) this.setMode('view');
+                } else {
+                    this.setMode('library');
+                }
             }
 
             setMode(mode) {
+                // If leaving view/study mode, save active state
+                if (this.state.mode === 'view' && mode === 'library') {
+                     this.saveActiveTextToLibrary();
+                     this.renderLibrary(); // Refresh list with latest data
+                }
+
                 this.state.mode = mode;
                 this.updateModeUI();
                 
                 if (mode === 'view') {
                     this.parseCards();
-                    // Close settings if open
-                    if (this.state.showSettings) {
-                        this.toggleSettings();
-                    }
+                    if (this.state.showSettings) this.toggleSettings();
                     this.elements.btnSettings.classList.remove('bg-blue-100', 'text-blue-600');
                 }
             }
 
             updateModeUI() {
+                const isLibrary = this.state.mode === 'library';
                 const isView = this.state.mode === 'view';
-                const isInput = this.state.mode === 'input';
-                const isAi = this.state.mode === 'ai';
                 
-                // Visibility
-                if (isView) {
-                    this.elements.viewInput.classList.add('hidden');
+                // Toggle Library View
+                if (isLibrary) {
+                    this.elements.viewLibrary.classList.remove('hidden');
+                    this.elements.viewStudy.classList.add('hidden');
+                    this.elements.viewInput.classList.add('hidden'); 
                     this.elements.viewAiInput.classList.add('hidden');
+                } else if (isView) {
+                    this.elements.viewLibrary.classList.add('hidden');
                     this.elements.viewStudy.classList.remove('hidden');
-                } else if (isInput) {
-                    this.elements.viewInput.classList.remove('hidden');
-                    this.elements.viewAiInput.classList.add('hidden');
-                    this.elements.viewStudy.classList.add('hidden');
-                } else if (isAi) {
                     this.elements.viewInput.classList.add('hidden');
-                    this.elements.viewAiInput.classList.remove('hidden');
-                    this.elements.viewStudy.classList.add('hidden');
+                    this.elements.viewAiInput.classList.add('hidden');
                 }
 
-                // Button Styles
-                const activeClass = ['bg-white', 'dark:bg-gray-700', 'text-blue-600', 'dark:text-blue-300', 'shadow-sm'];
-                const inactiveClass = ['text-gray-600', 'dark:text-gray-400', 'hover:text-gray-900'];
+                // Update Header Button State
+                const btnLib = this.elements.btnModeLibrary;
+                const activeClass = ['bg-blue-600', 'text-white', 'shadow-md']; // Dark theme handled by blue-600 text white
+                const inactiveClass = ['bg-gray-100', 'text-gray-600', 'dark:bg-gray-800', 'dark:text-gray-400', 'hover:bg-gray-200', 'dark:hover:bg-gray-700'];
 
-                // Reset all
-                [this.elements.btnModeView, this.elements.btnModeInput, this.elements.btnModeAi].forEach(btn => {
-                    btn.classList.remove(...activeClass);
-                    btn.classList.add(...inactiveClass);
-                });
-
-                // Set active
-                if (isView) {
-                    this.elements.btnModeView.classList.add(...activeClass);
-                    this.elements.btnModeView.classList.remove(...inactiveClass);
-                } else if (isInput) {
-                    this.elements.btnModeInput.classList.add(...activeClass);
-                    this.elements.btnModeInput.classList.remove(...inactiveClass);
-                } else if (isAi) {
-                    this.elements.btnModeAi.classList.add(...activeClass);
-                    this.elements.btnModeAi.classList.remove(...inactiveClass);
+                // Reset library button
+                if (isLibrary) {
+                    // btnLib.classList.add(...activeClass);
+                    // btnLib.classList.remove(...inactiveClass);
+                    // actually let's keep it simple style
+                } else {
+                    // btnLib.classList.remove(...activeClass);
+                    // btnLib.classList.add(...inactiveClass);
                 }
 
                 // Mobile Icon
                 const mobileIcon = document.getElementById('icon-mode-mobile');
-                if (isView) mobileIcon.setAttribute('data-lucide', 'book-open');
-                else if (isInput) mobileIcon.setAttribute('data-lucide', 'edit-3');
-                else if (isAi) mobileIcon.setAttribute('data-lucide', 'wand-2');
+                if (isLibrary) mobileIcon.setAttribute('data-lucide', 'library');
+                else if (isView) mobileIcon.setAttribute('data-lucide', 'book-open');
                 lucide.createIcons();
             }
 
@@ -2358,13 +2734,40 @@ ${userText}
             // --- Auto-Save Logic ---
             getSyncPayload() {
                 const { geminiApiKey, githubToken: _, gistId: __, geminiVoice, ...safeSettings } = this.state.settings;
+                
+                // Ensure Library is up to date with active session
+                // We should cloning library to avoid mutating state during save? No, just render it.
+                // However, we must ensure the ACTIVE text is saved into the library array before syncing.
+                // We do this by calling saveActiveTextToLibrary() BUT that method saves to localStorage.
+                // We can't call it here if this is a getter.
+                // Ideally, activeTextId's data IS in state.text/etc.
+                // We should maintain the library array always updated? Or update it here.
+                
+                let currentLibrary = [...this.state.library];
+                
+                if (this.state.activeTextId) {
+                    const idx = currentLibrary.findIndex(i => i.id === this.state.activeTextId);
+                    if (idx !== -1) {
+                        // Capture current input state if available
+                        const currentDraft = this.elements.writingInput ? this.elements.writingInput.value : (currentLibrary[idx].writingDraft || "");
+
+                        currentLibrary[idx] = {
+                            ...currentLibrary[idx],
+                            content: this.state.text,
+                            quizData: this.state.quizData,
+                            writingData: this.state.writingData,
+                            writingResult: this.state.writingResult,
+                            writingDraft: currentDraft,
+                            contextData: this.state.contextData,
+                            lastOpened: currentLibrary[idx].lastOpened // Use existing timestamp
+                        };
+                    }
+                }
+
                 return {
-                    text: this.state.text,
-                    quizData: this.state.quizData,
-                    writingData: this.state.writingData,
-                    writingResult: this.state.writingResult,
-                    contextData: this.state.contextData, 
-                    settings: safeSettings
+                    library: currentLibrary, 
+                    settings: safeSettings,
+                    version: 2 // Schema version
                 };
             }
 
@@ -2581,23 +2984,31 @@ ${userText}
 
                     const content = JSON.parse(file.content);
                     
-                    if (content.text) {
-                        this.state.text = content.text;
-                        // localStorage.setItem('hanzi_text', content.text); // REMOVED: Centralized on Gist
-                        this.elements.markdownInput.value = content.text;
-                    }
-                    if (content.quizData) {
-                        this.state.quizData = content.quizData;
-                        // localStorage.setItem('hanzi_quiz_data', JSON.stringify(content.quizData)); // REMOVED
-                        this.state.userAnswers = {}; 
-                    }
-                    if (content.writingData) {
-                        this.state.writingData = content.writingData;
-                        // localStorage.setItem('hanzi_writing_data', JSON.stringify(content.writingData)); // REMOVED
-                    }
-                    if (content.writingResult) {
-                         this.state.writingResult = content.writingResult;
-                         // localStorage.setItem('hanzi_writing_result', JSON.stringify(content.writingResult)); // REMOVED
+                    if (content.library) {
+                        this.state.library = content.library;
+                        this.saveLibraryToLocal();
+                        this.renderLibrary();
+                        
+                        // Reset active state
+                        this.state.activeTextId = null;
+                        this.state.text = "";
+                        this.setMode('library');
+                    } else if (content.text) {
+                        // Legacy Migration
+                        const newItem = {
+                            id: crypto.randomUUID(), 
+                            title: "Imported Study Text",
+                            content: content.text,
+                            quizData: content.quizData || null,
+                            writingData: content.writingData || null,
+                            writingResult: content.writingResult || null,
+                            contextData: content.contextData || {},
+                            lastOpened: Date.now()
+                        };
+                        this.state.library = [newItem];
+                        this.saveLibraryToLocal();
+                        this.renderLibrary();
+                        this.setMode('library');
                     }
                     
                     // Clear redundant local storage if we have successfully loaded from cloud
@@ -2605,10 +3016,7 @@ ${userText}
                     localStorage.removeItem('hanzi_quiz_data');
                     localStorage.removeItem('hanzi_writing_data');
                     localStorage.removeItem('hanzi_writing_result');
-                    if (content.contextData) {
-                        this.state.contextData = content.contextData;
-                    }
-                    
+
                     if (content.settings) {
                         const currentKeys = { 
                             geminiApiKey: this.state.settings.geminiApiKey,
@@ -3374,7 +3782,78 @@ ${vocabList}`;
             }
         }
 
-        const app = new HanziApp();
+        let app;
+        document.addEventListener('DOMContentLoaded', () => {
+            app = new HanziApp();
+        });
     </script>
+    <!-- Create Text Dialog -->
+    <div id="dialog-create-text" class="fixed inset-0 z-[60] hidden">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity" onclick="app.hideCreateTextDialog()"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-800 transform transition-all flex flex-col max-h-[90vh]">
+            
+            <!-- Header -->
+            <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-white dark:bg-gray-900 sticky top-0 z-10">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white">Create New Text</h3>
+                <button onclick="app.hideCreateTextDialog()" class="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                    <i data-lucide="x" class="w-5 h-5 text-gray-500"></i>
+                </button>
+            </div>
+
+            <!-- Body relative for scrolling -->
+            <div class="p-6 overflow-y-auto custom-scrollbar flex-1">
+                <!-- Title Input -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Title</label>
+                    <input type="text" id="input-create-title" placeholder="e.g., Lesson 1: Greetings" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-shadow">
+                </div>
+
+                <!-- Input Method Toggle -->
+                <div class="mb-4 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl flex">
+                    <button class="flex-1 py-2 rounded-lg text-sm font-medium transition-all bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-300" id="btn-create-manual" onclick="app.setCreateMode('manual')">
+                        Manual Input
+                    </button>
+                    <button class="flex-1 py-2 rounded-lg text-sm font-medium transition-all text-gray-600 dark:text-gray-400 hover:text-gray-900" id="btn-create-ai" onclick="app.setCreateMode('ai')">
+                        AI Generator
+                    </button>
+                </div>
+
+                <!-- Manual Input Area -->
+                <div id="container-create-manual" class="space-y-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Markdown Content</label>
+                    <textarea id="input-create-content" class="w-full h-64 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white font-mono text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-y" placeholder="Paste your markdown text here..."></textarea>
+                    <p class="text-xs text-gray-500">Use standard format containing Hanzi, Pinyin and Translation.</p>
+                </div>
+
+                <!-- AI Input Area -->
+                <div id="container-create-ai" class="hidden space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Topic or Content description</label>
+                        <textarea id="input-create-ai-prompt" class="w-full h-32 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-none" placeholder="e.g., Write a dialogue about ordering coffee in a Starbucks in Beijing..."></textarea>
+                        <div class="flex justify-between items-center mt-2">
+                           <span class="text-xs text-gray-500" id="create-ai-char-count">0/1000</span>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-xl border border-blue-100 dark:border-blue-900/30">
+                        <div class="flex items-center gap-2 text-blue-700 dark:text-blue-300 mb-1">
+                            <i data-lucide="sparkles" class="w-4 h-4"></i>
+                            <span class="text-xs font-bold uppercase">AI Model</span>
+                        </div>
+                        <p class="text-sm text-gray-600 dark:text-gray-300">Uses Gemini 2.0 Flash to generate educational content.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 flex justify-end gap-3">
+                <button onclick="app.hideCreateTextDialog()" class="px-5 py-2.5 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">Cancel</button>
+                <button id="btn-create-submit" onclick="app.submitCreateText()" class="px-5 py-2.5 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-600/20 active:scale-95 transition-all flex items-center gap-2">
+                    <span id="label-create-submit">Create Text</span>
+                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
