@@ -1171,7 +1171,7 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                 this.elements.markdownInput.value = this.state.text;
                 this.elements.markdownInput.addEventListener('input', (e) => {
                     this.state.text = e.target.value;
-                    localStorage.setItem('hanzi_text', this.state.text);
+                    // localStorage.setItem('hanzi_text', this.state.text); // REMOVED: Managed via Cloud/Memory
                     this.parseCards();
                     this.updateSyncUI();
                 });
@@ -1524,10 +1524,11 @@ Return ONLY a JSON object with this structure:
 
                     // Cache Global
                     this.state.quizData = parsed;
-                    localStorage.setItem('hanzi_quiz_data', JSON.stringify(this.state.quizData));
+                    // localStorage.setItem('hanzi_quiz_data', JSON.stringify(this.state.quizData)); // REMOVED: Managed via Cloud/Memory
                     
                     // Reset user answers
                     this.state.userAnswers = {};
+                    this.updateSyncUI(); // Update UI to show unsaved changes
                     
                     this.renderQuizUI();
 
@@ -1918,12 +1919,13 @@ ${fullText}
 
                     // Cache Global
                     this.state.writingData = parsed;
-                    localStorage.setItem('hanzi_writing_data', JSON.stringify(this.state.writingData));
+                    // localStorage.setItem('hanzi_writing_data', JSON.stringify(this.state.writingData)); // REMOVED
                     
                     // Reset Result
                     this.state.writingResult = null;
-                    localStorage.removeItem('hanzi_writing_result');
+                    // localStorage.removeItem('hanzi_writing_result'); // REMOVED
                     
+                    this.updateSyncUI(); // Update UI to show unsaved changes
                     this.renderWritingUI();
                 } catch (e) {
                     console.error(e);
@@ -2006,8 +2008,9 @@ ${userText}
                     // Cache
                     this.state.writingResult = parsed;
                     this.state.writingResult.original = userText;
-                    localStorage.setItem('hanzi_writing_result', JSON.stringify(this.state.writingResult));
+                    // localStorage.setItem('hanzi_writing_result', JSON.stringify(this.state.writingResult)); // REMOVED
                     
+                    this.updateSyncUI(); // Update UI to show unsaved changes
                     this.renderWritingUI();
 
                 } catch (e) {
@@ -2099,6 +2102,7 @@ ${userText}
 
             retryWriting() {
                  this.state.writingResult = null;
+                 this.updateSyncUI(); // Update UI to show unsaved changes
                  this.renderWritingUI();
             }
 
@@ -2109,7 +2113,8 @@ ${userText}
             async newQuiz() {
                 if (await this.showConfirm("Generate a new quiz? This will use your Gemini API quota.")) {
                     this.state.quizData = null;
-                    localStorage.setItem('hanzi_quiz_data', null);
+                    // localStorage.setItem('hanzi_quiz_data', null); // REMOVED
+                    this.updateSyncUI(); // Update UI to show unsaved changes
                     this.generateQuiz();
                 }
             }
@@ -2512,6 +2517,12 @@ ${userText}
 
                     this.state.lastSavedSnapshot = snapshot;
 
+                    // Clear redundant local storage NOW THAT IT IS SECURE ON GIST
+                    localStorage.removeItem('hanzi_text');
+                    localStorage.removeItem('hanzi_quiz_data');
+                    localStorage.removeItem('hanzi_writing_data');
+                    localStorage.removeItem('hanzi_writing_result');
+
                     if (!isAutosave) {
                         await this.showAlert("Data saved to Cloud successfully!", "Sync Complete");
                     } else {
@@ -2571,22 +2582,28 @@ ${userText}
                     
                     if (content.text) {
                         this.state.text = content.text;
-                        localStorage.setItem('hanzi_text', content.text);
+                        // localStorage.setItem('hanzi_text', content.text); // REMOVED: Centralized on Gist
                         this.elements.markdownInput.value = content.text;
                     }
                     if (content.quizData) {
                         this.state.quizData = content.quizData;
-                        localStorage.setItem('hanzi_quiz_data', JSON.stringify(content.quizData));
+                        // localStorage.setItem('hanzi_quiz_data', JSON.stringify(content.quizData)); // REMOVED
                         this.state.userAnswers = {}; 
                     }
                     if (content.writingData) {
                         this.state.writingData = content.writingData;
-                        localStorage.setItem('hanzi_writing_data', JSON.stringify(content.writingData));
+                        // localStorage.setItem('hanzi_writing_data', JSON.stringify(content.writingData)); // REMOVED
                     }
                     if (content.writingResult) {
                          this.state.writingResult = content.writingResult;
-                         localStorage.setItem('hanzi_writing_result', JSON.stringify(content.writingResult));
+                         // localStorage.setItem('hanzi_writing_result', JSON.stringify(content.writingResult)); // REMOVED
                     }
+                    
+                    // Clear redundant local storage if we have successfully loaded from cloud
+                    localStorage.removeItem('hanzi_text');
+                    localStorage.removeItem('hanzi_quiz_data');
+                    localStorage.removeItem('hanzi_writing_data');
+                    localStorage.removeItem('hanzi_writing_result');
                     if (content.contextData) {
                         this.state.contextData = content.contextData;
                     }
@@ -2823,7 +2840,7 @@ ${vocabList}`;
                 
                 // Update State & UI
                 this.state.text = newText;
-                localStorage.setItem('hanzi_text', newText);
+                // localStorage.setItem('hanzi_text', newText); // REMOVED
                 this.elements.markdownInput.value = newText;
                 
                 // Reset to view mode
