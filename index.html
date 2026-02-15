@@ -2261,7 +2261,10 @@ Return ONLY a JSON object with this structure:
                                 rawHanzi = rawHanzi.replace(/^\*\*?/, '').replace(/\*\*?$/, '');
                                 
                                 const pinyin = match[2].trim();
-                                const translation = match[3].trim();
+                                let translation = match[3].trim();
+                                
+                                // Remove markdown formatting artifacts (bold/italic markers)
+                                translation = translation.replace(/[\*_]{1,2}/g, '');
                                 
                                 if (rawHanzi && !uniqueVocab.has(rawHanzi)) {
                                     uniqueVocab.set(rawHanzi, { hanzi: rawHanzi, pinyin, translation });
