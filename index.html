@@ -902,50 +902,6 @@
         const db = getFirestore(firebaseApp);
         const auth = getAuth(firebaseApp);
 
-        const DEFAULT_TEXT = `**近期天文学界出现几项显著进展。**
-
-**Pinyin:** Jìnqī tiānwénxué jiè chūxiàn jǐ xiàng xiǎnzhù jìnzhǎn.
-
-**Translation:** Recently, several significant advancements have emerged in the field of astronomy.
-
-**Grammar Explanation:**
-The sentence follows a standard **Time + Subject + Verb + Object** structure.
-
-* **近期 (Jìnqī):** Acts as a temporal adverbial placed at the beginning.
-* **界 (jiè):** A suffix meaning "field" or "circle" (e.g., medical field, fashion circles).
-* **几项 (jǐ xiàng):** Uses the measure word **项 (xiàng)**, which is typically used for items, tasks, or achievements.
-
-**Core Vocabulary:**
-
-* **近期 (jìnqī):** Recent / in the near term
-* **天文学界 (tiānwénxué jiè):** The field of astronomy / astronomical community
-* **出现 (chūxiàn):** To appear / to emerge
-* **显著 (xiǎnzhù):** Significant / notable
-* **进展 (jìnzhǎn):** Progress / advancement
-
----
-
-**詹姆斯·韦伯空间望远镜捕捉到了迄今最遥远的星系MoM-z14，它的光从宇宙大爆炸后仅2.8亿年传播至今，这一发现挑战了现有宇宙早期模型并为理解宇宙演化提供新线索。**
-
-**Pinyin:** Zhānmǔsī·Wéibó kōngjiān wàngyuǎnjìng bǔzhuō dàole qǐjīn zuì yáoyuǎn de xīngxì MoM-z14, tā de guāng cóng yǔzhòu dà bàozhà hòu jǐn èr diǎn bā yì nián chuánbō zhìjīn, zhè yī fāxiàn tiǎozhànle xiànyǒu yǔzhòu zǎoqī móxíng bìng wèi lǐjiě yǔzhòu yǎnhuà tígōng xīn xiànsuǒ.
-
-**Translation:** The James Webb Space Telescope has captured the most distant galaxy to date, MoM-z14; its light has traveled since only 280 million years after the Big Bang, a discovery that challenges existing early universe models and provides new clues for understanding cosmic evolution.
-
-**Grammar Explanation:**
-
-* **V + 到了 (dàole):** Indicates the successful completion of an action (capturing the image).
-* **从... 至今 (cóng... zhìjīn):** A formal structure meaning "from [time/event] until now."
-* **并 (bìng):** A conjunction used to connect two verbs or verb phrases ("challenges" and "provides"), often implying a formal or logical progression.
-
-**Core Vocabulary:**
-
-* **空间望远镜 (kōngjiān wàngyuǎnjìng):** Space telescope
-* **捕捉 (bǔzhuō):** To capture / to catch
-* **迄今 (qǐjīn):** To date / until now
-* **宇宙大爆炸 (yǔzhòu dà bàozhà):** The Big Bang
-* **演化 (yǎnhuà):** Evolution
-* **线索 (xiànsuǒ):** Clue / lead`;
-
         class HanziApp {
             constructor() {
                 this.db = db;
@@ -1003,7 +959,7 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                     activeTextId: null,
 
                     // Active Text Session Buffers (Loaded from Library)
-                    text: DEFAULT_TEXT, 
+                    text: "", 
                     cards: [],
                     currentIndex: 0, 
 
@@ -1320,33 +1276,32 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                 }
 
                 // MIGRATION: If library is empty but we have legacy 'hanzi_text', migrate it.
+                // DEFAULT_TEXT removed; rely on Firestore for content if no local data exists.
                 if (this.state.library.length === 0) {
                     const legacyText = localStorage.getItem('hanzi_text');
-                    // Check if DEFAULT_TEXT is currently "stored" or if it is just a fallback.
-                    // If legacyText exists, use it. If not, maybe use DEFAULT_TEXT as a starter lesson.
                     
-                    const content = legacyText || DEFAULT_TEXT;
-                    
-                    const legacyQuiz = JSON.parse(localStorage.getItem('hanzi_quiz_data')) || null;
-                    const legacyWriting = JSON.parse(localStorage.getItem('hanzi_writing_data')) || null;
-                    const legacyWritingRes = JSON.parse(localStorage.getItem('hanzi_writing_result')) || null;
-                    // contextData was not persisted to localStorage in old code (only in state) - wait.
-                    // I check init() old code: contextData was in state default, not loaded from LS.
-                    
-                    // Create first library item
-                    const newItem = {
-                        id: crypto.randomUUID(),
-                        title: "Initial Study Text",
-                        content: content,
-                        quizData: legacyQuiz,
-                        writingData: legacyWriting,
-                        writingResult: legacyWritingRes,
-                        contextData: {}, // Lost on reload unfortunately in old version
-                        lastOpened: Date.now()
-                    };
-                    
-                    this.state.library.push(newItem);
-                    this.saveLibraryToLocal(); // Persist new structure
+                    if (legacyText) {
+                        const legacyQuiz = JSON.parse(localStorage.getItem('hanzi_quiz_data')) || null;
+                        const legacyWriting = JSON.parse(localStorage.getItem('hanzi_writing_data')) || null;
+                        const legacyWritingRes = JSON.parse(localStorage.getItem('hanzi_writing_result')) || null;
+                        
+                        // Create first library item from legacy data
+                        const newItem = {
+                            id: crypto.randomUUID(),
+                            title: "Migrated Text",
+                            content: legacyText,
+                            quizData: legacyQuiz,
+                            writingData: legacyWriting,
+                            writingResult: legacyWritingRes,
+                            contextData: {}, 
+                            lastOpened: Date.now()
+                        };
+                        
+                        this.state.library.push(newItem);
+                        this.saveLibraryToLocal(); // Persist new structure (Actually this fn is empty now, but safe to call)
+                        // Trigger Firestore sync as well? Ideally yes, but that happens elsewhere usually
+                        this.saveToFirestore(true);
+                    }
                 }
             }
 
