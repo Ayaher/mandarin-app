@@ -465,7 +465,6 @@
             <div id="library-loading" class="hidden flex flex-col items-center justify-center py-20 text-center">
                 <i data-lucide="loader-2" class="w-10 h-10 text-blue-600 animate-spin mb-4"></i>
                 <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Loading Library...</h3>
-                <p class="text-gray-500 dark:text-gray-400 max-w-sm mx-auto">Syncing your data from the cloud.</p>
             </div>
 
             <div id="library-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20">
@@ -1290,6 +1289,14 @@
 
                 this.loadLocalLibrary(); 
 
+                // Check URL for text
+                const urlParams = new URLSearchParams(window.location.search);
+                const textId = urlParams.get('text');
+                if (textId) {
+                     const found = this.state.library.find(i => i.id === textId);
+                     if (found) this.openText(textId);
+                }
+
                 this.updateModeUI();
                 this.updateSettingsUI();
                 this.updateGeminiUI();
@@ -1297,6 +1304,22 @@
                 this.renderLibrary();
                 lucide.createIcons();
                 
+                window.addEventListener('popstate', (event) => {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const textId = urlParams.get('text');
+                    
+                    if (textId) {
+                        const found = this.state.library.find(i => i.id === textId);
+                        if (found && this.state.activeTextId !== textId) {
+                            this.openText(textId);
+                        }
+                    } else {
+                         if (this.state.mode !== 'library') {
+                             this.setMode('library');
+                         }
+                    }
+                });
+
                 window.addEventListener('beforeunload', (e) => {
                     if (this.checkUnsavedChanges()) {
                         e.preventDefault();
@@ -1589,6 +1612,13 @@
                 // Update Last Opened
                 item.lastOpened = Date.now();
                 this.saveLibraryToLocal();
+
+                // Update URL
+                const newUrl = new URL(window.location);
+                if (newUrl.searchParams.get('text') !== id) {
+                    newUrl.searchParams.set('text', id);
+                    window.history.pushState({ textId: id }, '', newUrl);
+                }
 
                 // Setup View Mode
                 this.elements.markdownInput.value = this.state.text;
@@ -2875,6 +2905,11 @@ ${userText}
                 if (this.state.mode === 'view' && mode === 'library') {
                      this.saveActiveTextToLibrary();
                      this.renderLibrary(); // Refresh list with latest data
+                     
+                     // Clear URL param
+                     const newUrl = new URL(window.location);
+                     newUrl.searchParams.delete('text');
+                     window.history.pushState({}, '', newUrl);
                 }
 
                 this.state.mode = mode;
@@ -3245,7 +3280,21 @@ ${userText}
                         if (this.state.library.length > 0) {
                             this.saveLibraryToLocal();
                             this.renderLibrary();
-                             this.setMode('library');
+                        }
+                        
+                        // Check URL for text (Late Binding)
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const textId = urlParams.get('text');
+                        if (textId && this.state.mode === 'library') { // Only auto-open if we are still at 'root'
+                            const found = this.state.library.find(i => i.id === textId);
+                            if (found) {
+                                this.openText(textId);
+                            } else {
+                                    this.showToast("Text not found", "alert-circle");
+                                    const newUrl = new URL(window.location);
+                                    newUrl.searchParams.delete('text');
+                                    window.history.replaceState({}, '', newUrl);
+                            }
                         }
                         
                         if (content.settings) {
