@@ -3011,7 +3011,8 @@ ${userText}
 
             // --- Auto-Save Logic ---
             getSyncPayload() {
-                const { geminiApiKey, githubToken: _, gistId: __, geminiVoice, ...safeSettings } = this.state.settings;
+                // Now including detailed settings in the main payload for centralized storage
+                const { githubToken: _, gistId: __, ...settingsToSave } = this.state.settings;
                 
                 // Ensure Library is up to date with active session
                 // We should cloning library to avoid mutating state during save? No, just render it.
@@ -3044,7 +3045,7 @@ ${userText}
 
                 return {
                     library: currentLibrary, 
-                    settings: safeSettings,
+                    settings: settingsToSave,
                     version: 2 // Schema version
                 };
             }
@@ -3124,44 +3125,31 @@ ${userText}
                 if (!this.state.user) return;
                 
                 // If already saving, queue a save or ignore?
-                // With immediate save on input (debounced), we might hit this often.
-                // Let's keep it simple: if saving, ignore? Or maybe prevent concurrent saves.
                 if (this.state.isSaving) return;
 
                 const uid = this.state.user.uid;
                 
                 // Check redundancy
-                // Only save if there are actual changes, unless forced.
                 if (!force && this.state.lastSavedSnapshot) {
                     const hasChanges = this.checkUnsavedChanges();
-                    if (!hasChanges) {
-                        // console.log("No changes to save.");
-                        return; 
-                    }
+                    if (!hasChanges) return; 
                 }
 
                 this.state.isSaving = true;
                 this.updateSyncUI();
 
                 const payload = this.getSyncPayload();
+                
+                // Payload now includes geminiApiKey and geminiVoice as part of settingsToSave
+                
                 const snapshot = JSON.stringify(payload);
 
                 try {
-                    // 1. Save Config (Gemini Key & Voice)
-                    const configUpdate = {};
-                    // Always update from state, allowing empty string to clear the key if needed
-                    if (this.state.settings.geminiApiKey !== undefined) configUpdate.gemini_api_key = this.state.settings.geminiApiKey;
-                    if (this.state.settings.geminiVoice !== undefined) configUpdate.gemini_voice = this.state.settings.geminiVoice;
-
-                    if (Object.keys(configUpdate).length > 0) {
-                        await setDoc(doc(this.db, "users", uid, "settings", "config"), configUpdate, { merge: true });
-                    }
-
-                    // 2. Save App Data
-                    const dataToSave = JSON.parse(snapshot);
-                    
-                    await setDoc(doc(this.db, "users", uid, "data", "app_data"), {
-                        ...dataToSave,
+                    // Unified Save: users/{uid}/settings/data
+                    // Consolidating everything into one document in the 'settings' subcollection
+                    // Using 'data' as the document ID since 'settings' is the subcollection
+                    await setDoc(doc(this.db, "users", uid, "settings", "data"), {
+                        ...payload,
                         updatedAt: new Date().toISOString()
                     });
 
@@ -3170,8 +3158,6 @@ ${userText}
 
                 } catch (e) {
                     console.error("Save Error", e);
-                    // Show error in sync UI
-                    // Maybe show a critical error dialog if it persists?
                 } finally {
                     this.state.isSaving = false;
                     this.updateSyncUI();
@@ -3184,52 +3170,74 @@ ${userText}
 
                 // Set Loading State
                 this.state.isLibraryLoading = true;
-                this.renderLibrary(); // Re-render to show loading spinner
+                this.renderLibrary(); 
                 this.updateSyncUI();
 
                 try {
-                    // 1. Load Gemini Config
-                    const configSnap = await getDoc(doc(this.db, "users", uid, "settings", "config"));
-                    if (configSnap.exists()) {
-                        const config = configSnap.data();
-                        if (config.gemini_api_key) {
-                            this.state.settings.geminiApiKey = config.gemini_api_key;
+                    // Unified Load: users/{uid}/settings/data
+                    const docSnap = await getDoc(doc(this.db, "users", uid, "settings", "data"));
+                    
+                    let content = null;
+
+                    if (docSnap.exists()) {
+                        console.log("Loading consolidated settings found.");
+                        content = docSnap.data();
+                    } else {
+                        console.log("No consolidated settings found. Attempting migration.");
+                        // Fallback/Migration: Check old locations if new doc doesn't exist
+                        console.log("Migrating from old structure...");
+                        
+                        // 1. Load Old App Data
+                        const oldDataSnap = await getDoc(doc(this.db, "users", uid, "data", "app_data"));
+                        if (oldDataSnap.exists()) {
+                            content = oldDataSnap.data();
                         }
-                        if (config.gemini_voice) {
-                            this.state.settings.geminiVoice = config.gemini_voice;
+
+                        // 2. Load Old Config
+                        const oldConfigSnap = await getDoc(doc(this.db, "users", uid, "settings", "config"));
+                        if (oldConfigSnap.exists()) {
+                            const oldConfig = oldConfigSnap.data();
+                            if (!content) content = { settings: {} };
+                            if (!content.settings) content.settings = {};
+                            
+                            if (oldConfig.gemini_api_key) content.settings.geminiApiKey = oldConfig.gemini_api_key;
+                            if (oldConfig.gemini_voice) content.settings.geminiVoice = oldConfig.gemini_voice;
                         }
                     }
 
-                    // 2. Load App Data
-                    const dataSnap = await getDoc(doc(this.db, "users", uid, "data", "app_data"));
-                    if (dataSnap.exists()) {
-                        const content = dataSnap.data();
-                        
+                    if (content) {
                         if (content.library) {
                             this.state.library = content.library;
                             this.saveLibraryToLocal();
                             this.renderLibrary();
-                            // Default to library view on load
                              this.setMode('library');
                         }
                         
                         if (content.settings) {
-                             const currentKey = this.state.settings.geminiApiKey;
-                             const currentVoice = this.state.settings.geminiVoice;
-
+                             // Merge settings
+                             console.log("Found settings in DB (merging):", content.settings);
                              this.state.settings = { ...this.state.settings, ...content.settings };
-                             
-                             // Prioritize the one from config doc if it existed
-                             if (currentKey) this.state.settings.geminiApiKey = currentKey;
-                             if (currentVoice) this.state.settings.geminiVoice = currentVoice;
+                        } else {
+                            console.log("No 'settings' field in content object. Using defaults or migration data.");
+                            // If content.settings is missing, we should probably initialize it 
+                            // in case the document exists but is malformed?
+                            // But migration logic handles this by defaulting content.settings = {}.
                         }
 
-                        this.saveSettings();
+                        // Force UI update immediately with new settings
                         this.updateSettingsUI();
                         this.updateGeminiUI();
                         this.parseCards();
                         
-                        this.state.lastSavedSnapshot = JSON.stringify(this.getSyncPayload());
+                        // THEN save to ensure consistency and correct timestamp?
+                        // Actually, saving immediately after loading is only needed if we migrated data.
+                        // If we loaded existing data, saving is redundant but harmless.
+                        this.saveSettings(); 
+                        
+                        // Update Sync Payload to match what we just loaded (including config)
+                        // Note: getSyncPayload strips config, so we might need to be careful with comparison
+                        // But since we just loaded, we should be in sync.
+                        this.state.lastSavedSnapshot = JSON.stringify(this.getSyncPayload()); // Baseline
                          if (!isInitial) await this.showAlert("Data synced!", "Success");
                     }
 
@@ -3239,7 +3247,7 @@ ${userText}
                 } finally {
                     this.state.isSaving = false;
                     this.state.isLibraryLoading = false;
-                    this.renderLibrary(); // Re-render to show content
+                    this.renderLibrary(); 
                     this.updateSyncUI();
                 }
             }
