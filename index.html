@@ -3030,23 +3030,30 @@ ${userText}
                         // Capture current input state if available
                         const currentDraft = this.elements.writingInput ? this.elements.writingInput.value : (currentLibrary[idx].writingDraft || "");
 
+                        // We only update the lightweight fields here if needed for the list
+                        // The full content save happens via saveToFirestore's specialized library save logic
                         currentLibrary[idx] = {
                             ...currentLibrary[idx],
-                            content: this.state.text,
-                            quizData: this.state.quizData,
-                            writingData: this.state.writingData,
-                            writingResult: this.state.writingResult,
-                            writingDraft: currentDraft,
-                            contextData: this.state.contextData,
-                            lastOpened: currentLibrary[idx].lastOpened // Use existing timestamp
+                            title: currentLibrary[idx].title, // Keep title
+                            lastOpened: currentLibrary[idx].lastOpened,
+                            isDone: currentLibrary[idx].isDone,
+                            // Content/Data fields are stripped from the main index payload below
                         };
                     }
                 }
 
+                // Create Lightweight Index
+                // STRIP heavy content: content, quizData, writingData, writingResult, contextData
+                const libraryIndex = currentLibrary.map(item => {
+                    const { content, quizData, writingData, writingResult, contextData, writingDraft, ...indexItem } = item;
+                    return indexItem;
+                });
+
                 return {
-                    library: currentLibrary, 
+                    libraryIndex: libraryIndex, // New property for the index
+                    // library: currentLibrary, // REMOVED: Don't store full library in settings doc anymore
                     settings: settingsToSave,
-                    version: 2 // Schema version
+                    version: 3 // Schema version bump for split
                 };
             }
 
@@ -3145,6 +3152,38 @@ ${userText}
                 const snapshot = JSON.stringify(payload);
 
                 try {
+                    // Part 1: Save Individual Library Items (Active Text First)
+                    // Strategy: We can save ALL library items or just the changed ones.
+                    // For simplicity and robustness during this refactor, let's iterate and save active state.
+                    // Ideally we track dirty flags, but we don't have them easily.
+                    // BUT: Writing to many docs is costly.
+                    // Optimization: Only save the ACTIVE text content if it's the one being worked on.
+                    // However, 'force sync' implies saving everything.
+                    
+                    // Let's iterate all library items and save them to users/{uid}/library/{id}
+                    const tasks = this.state.library.map(async (item) => {
+                        // Prepare full content doc
+                        // If this is the active text, use current state values
+                        let docData = { ...item };
+                        
+                        if (this.state.activeTextId === item.id) {
+                            docData.content = this.state.text;
+                            docData.quizData = this.state.quizData;
+                            docData.writingData = this.state.writingData;
+                            docData.writingResult = this.state.writingResult;
+                            docData.userAnswers = this.state.userAnswers;
+                            docData.contextData = this.state.contextData;
+                            docData.writingDraft = this.elements.writingInput ? this.elements.writingInput.value : item.writingDraft;
+                        }
+                        
+                        // Save to separate collection
+                        // users/{uid}/library/{item.id}
+                        await setDoc(doc(this.db, "users", uid, "library", item.id), docData, { merge: true });
+                    });
+                    
+                    await Promise.all(tasks);
+
+                    // Part 2: Save Settings & Index
                     // Unified Save: users/{uid}/settings/data
                     // Consolidating everything into one document in the 'settings' subcollection
                     // Using 'data' as the document ID since 'settings' is the subcollection
@@ -3207,7 +3246,25 @@ ${userText}
 
                     if (content) {
                         if (content.library) {
+                            // Legacy: Full library embedded
                             this.state.library = content.library;
+                        } else if (content.libraryIndex) {
+                            // New: Load individual library documents
+                            console.log(`Loading ${content.libraryIndex.length} library items from separate docs...`);
+                            
+                            // Note: This makes N reads. For vast libraries, use pagination or collection query.
+                            // But here we rely on the index for order/integrity.
+                            const tasks = content.libraryIndex.map(idxItem => 
+                                getDoc(doc(this.db, "users", uid, "library", idxItem.id))
+                                    .then(snap => snap.exists() ? snap.data() : null)
+                                    .catch(e => { console.error(e); return null; })
+                            );
+                            
+                            const docs = await Promise.all(tasks);
+                            this.state.library = docs.filter(Boolean);
+                        }
+
+                        if (this.state.library.length > 0) {
                             this.saveLibraryToLocal();
                             this.renderLibrary();
                              this.setMode('library');
