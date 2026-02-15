@@ -451,6 +451,9 @@
                         <input type="text" id="input-library-search" placeholder="Search title..." class="pl-9 pr-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 w-full md:w-48 transition-shadow">
                         <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
                     </div>
+                    <div class="flex gap-1 items-center bg-gray-100 dark:bg-gray-800 p-1 rounded-xl hidden md:flex" id="library-filter-labels">
+                        <!-- Injected via JS -->
+                    </div>
                     <label class="flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors select-none">
                         <input type="checkbox" id="checkbox-library-not-done" class="rounded text-blue-600 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600">
                         <span class="text-sm text-gray-700 dark:text-gray-300">Not Done</span>
@@ -923,7 +926,8 @@
             constructor() {
                 this.db = db;
                 this.auth = auth;
-
+                this.LABELS = ['🏷️', '❤️', '⭐', '🔥', '📚'];
+                
                 // Auth Handlers
                 this.handlers = {
                     login: async () => {
@@ -999,6 +1003,7 @@
                     activeTextId: null,
                     librarySearch: '',
                     libraryFilterNotDone: false,
+                    libraryFilterLabels: [],
                     
                     // Active Text Session Buffers (Loaded from Library)
                     text: "", 
@@ -1061,6 +1066,7 @@
                     libraryLoading: document.getElementById('library-loading'),
                     inputLibrarySearch: document.getElementById('input-library-search'),
                     checkboxLibraryNotDone: document.getElementById('checkbox-library-not-done'),
+                    libraryFilterLabels: document.getElementById('library-filter-labels'),
                     
                     // Create Text Elements
                     dialogCreateText: document.getElementById('dialog-create-text'),
@@ -1233,6 +1239,8 @@
                 }
 
                 if (this.state.darkMode) document.documentElement.classList.add('dark');
+
+                this.renderLibraryFilterLabels(); // Render Static Filter UI
 
                 this.setupEventListeners();
                 this.setupAuth();
@@ -1492,6 +1500,61 @@
                 }
             }
 
+            // --- Label Management ---
+            renderCreateTextLabels() {
+                const container = document.getElementById('container-create-labels');
+                if (!container) return;
+                
+                container.innerHTML = '';
+                
+                this.LABELS.forEach(label => {
+                    const btn = document.createElement('button');
+                    const isSelected = this.state.tempLabels.has(label);
+                    
+                    btn.type = 'button';
+                    btn.className = `w-10 h-10 text-xl rounded-xl border-2 transition-all flex items-center justify-center ${isSelected ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 scale-105 shadow-md z-10 grayscale-0 opacity-100' : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700 opacity-60 hover:opacity-100 grayscale'}`;
+                    btn.textContent = label;
+                    
+                    btn.onclick = () => {
+                        if (this.state.tempLabels.has(label)) {
+                            this.state.tempLabels.delete(label);
+                        } else {
+                            this.state.tempLabels.add(label);
+                        }
+                        this.renderCreateTextLabels(); // Re-render to update UI
+                    };
+                    
+                    container.appendChild(btn);
+                });
+            }
+
+            renderLibraryFilterLabels() {
+                const container = document.getElementById('library-filter-labels');
+                if (!container) return;
+                
+                container.innerHTML = '';
+                
+                this.LABELS.forEach(label => {
+                    const isSelected = this.state.libraryFilterLabels.includes(label);
+                    const btn = document.createElement('button');
+                    btn.title = `Filter by ${label}`;
+                    btn.className = `w-8 h-8 text-sm rounded-lg transition-all flex items-center justify-center ${isSelected ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 ring-2 ring-blue-500 opacity-100 grayscale-0' : 'hover:bg-gray-200 dark:hover:bg-gray-700 opacity-50 hover:opacity-100 grayscale'}`;
+                    btn.textContent = label;
+
+                    btn.onclick = () => {
+                        if (this.state.libraryFilterLabels.includes(label)) {
+                            this.state.libraryFilterLabels = this.state.libraryFilterLabels.filter(l => l !== label);
+                        } else {
+                            this.state.libraryFilterLabels.push(label);
+                        }
+                        this.renderLibraryFilterLabels();
+                        this.renderLibrary();
+                    };
+                    
+                    container.appendChild(btn);
+                });
+            }
+
             // --- Library Management ---
 
             renderLibrary() {
@@ -1526,6 +1589,13 @@
                     filtered = filtered.filter(item => !item.isDone);
                 }
 
+                if (this.state.libraryFilterLabels.length > 0) {
+                     filtered = filtered.filter(item => {
+                        if (!item.labels) return false;
+                        return this.state.libraryFilterLabels.some(l => item.labels.includes(l));
+                     });
+                }
+
                 if (filtered.length === 0) {
                     // Show "No results" potentially?
                     // For now, let's just show empty or a custom "No match" message?
@@ -1550,6 +1620,10 @@
 
                     const preview = item.content.substring(0, 100).replace(/[*#]/g, '') + '...';
                     
+                    const labelsHtml = (item.labels && item.labels.length > 0) 
+                        ? `<div class="mb-2 flex gap-1 flex-wrap">${item.labels.map(l => `<span class="text-base cursor-help" title="Label">${l}</span>`).join('')}</div>`
+                        : '';
+
                     const d = new Date(item.createdAt || item.lastOpened || Date.now());
                     const date = `${d.getDate()}/${d.toLocaleString('en-US', { month: 'short' }).toLowerCase()}/${d.getFullYear()}`;
 
@@ -1558,7 +1632,8 @@
                     card.innerHTML = `
                          ${doneBadge}
                          <div class="p-6 flex-1 cursor-pointer hover:bg-gray-50/50 dark:hover:bg-gray-700/50 transition-colors" onclick="app.openText('${item.id}')">
-                            <h3 class="font-bold text-lg text-gray-900 dark:text-white mb-2 line-clamp-1 pr-6">${item.title}</h3>
+                            <h3 class="font-bold text-lg text-gray-900 dark:text-white mb-1 line-clamp-1 pr-6">${item.title}</h3>
+                            ${labelsHtml}
                             <p class="text-sm text-gray-500 dark:text-gray-400 line-clamp-3 leading-relaxed">${preview}</p>
                         </div>
                         <div class="px-6 py-4 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-100 dark:border-gray-800 flex justify-between items-center text-xs text-gray-400">
@@ -1696,13 +1771,19 @@
                        this.elements.inputCreateTitle.value = item.title;
                        this.elements.inputCreateContent.value = item.content;
                        this.elements.labelCreateSubmit.textContent = "Update Text";
+                       
+                       this.state.tempLabels = new Set(item.labels || []);
                     }
                 } else {
                     this.elements.inputCreateTitle.value = '';
                     this.elements.inputCreateContent.value = '';
                     this.elements.inputCreateAiPrompt.value = '';
                     this.elements.labelCreateSubmit.textContent = "Create Text";
+                    
+                    this.state.tempLabels = new Set();
                 }
+                
+                this.renderCreateTextLabels();
                 
                 this.elements.dialogCreateText.classList.remove('hidden');
             }
@@ -1751,6 +1832,8 @@
                     this.showAlert("Please enter a title.", "Title Required");
                     return;
                 }
+                
+                const labels = Array.from(this.state.tempLabels || []);
 
                 let content = "";
 
@@ -1760,7 +1843,7 @@
                         this.showAlert("Please enter some text.", "Content Required");
                         return;
                     }
-                    this.finalizeCreateText(title, content);
+                    this.finalizeCreateText(title, content, labels);
                 } else {
                     // AI Generation
                     const promptText = this.elements.inputCreateAiPrompt.value.trim();
@@ -1769,11 +1852,11 @@
                         return;
                     }
                     
-                    await this.generateAiText(title, promptText);
+                    await this.generateAiText(title, promptText, labels);
                 }
             }
 
-            async generateAiText(title, userPrompt) {
+            async generateAiText(title, userPrompt, labels = []) {
                  const apiKey = this.state.settings.geminiApiKey;
                  if (!apiKey) {
                      this.toggleGemini();
@@ -1819,9 +1902,14 @@
                     if (!response.ok) throw new Error("API request failed");
 
                     const data = await response.json();
-                    const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                    let generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
                     
-                    this.finalizeCreateText(title, generatedText);
+                    // Simple cleanup if gemini wraps in markdown block
+                    if (generatedText) {
+                         generatedText = generatedText.replace(/^```(markdown)?/i, '').replace(/```$/i, '').trim();
+                    }
+                    
+                    this.finalizeCreateText(title, generatedText, labels);
 
                  } catch (e) {
                      console.error(e);
@@ -1833,7 +1921,7 @@
                  }
             }
 
-            finalizeCreateText(title, content) {
+            finalizeCreateText(title, content, labels = []) {
                 if (this.state.editingId) {
                     // Update specific library item without changing order?
                     const index = this.state.library.findIndex(item => item.id === this.state.editingId);
@@ -1841,6 +1929,7 @@
                         this.state.library[index].title = title;
                         this.state.library[index].content = content;
                         this.state.library[index].lastOpened = Date.now(); // Update timestamp
+                        this.state.library[index].labels = labels; // Save labels
                         
                         // If it's the active text, refresh active state without switching view
                         if (this.state.activeTextId === this.state.editingId) {
@@ -1866,6 +1955,7 @@
                     id: crypto.randomUUID(),
                     title: title,
                     content: content,
+                    labels: labels, // Save labels
                     lastOpened: Date.now(),
                     createdAt: Date.now(),
                     quizData: null,
@@ -1873,7 +1963,8 @@
                     writingData: null,
                     writingDraft: "",
                     contextData: {},
-                    writingResult: null
+                    writingResult: null,
+                    isDone: false
                 };
                 
                 this.state.library.unshift(newItem); 
@@ -4065,6 +4156,14 @@ ${vocabList}`;
                 <div class="mb-6">
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Title</label>
                     <input type="text" id="input-create-title" placeholder="e.g., Lesson 1: Greetings" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-shadow">
+                </div>
+
+                <!-- Label Selection -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Labels</label>
+                    <div class="flex gap-2 flex-wrap" id="container-create-labels">
+                        <!-- Labels injected via JS -->
+                    </div>
                 </div>
 
                 <!-- Input Method Toggle -->
