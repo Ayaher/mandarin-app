@@ -3147,11 +3147,14 @@ ${userText}
                 const snapshot = JSON.stringify(payload);
 
                 try {
-                    // 1. Save Config (Gemini Key)
-                    if (this.state.settings.geminiApiKey) {
-                        await setDoc(doc(this.db, "users", uid, "settings", "config"), {
-                            gemini_api_key: this.state.settings.geminiApiKey
-                        }, { merge: true });
+                    // 1. Save Config (Gemini Key & Voice)
+                    const configUpdate = {};
+                    // Always update from state, allowing empty string to clear the key if needed
+                    if (this.state.settings.geminiApiKey !== undefined) configUpdate.gemini_api_key = this.state.settings.geminiApiKey;
+                    if (this.state.settings.geminiVoice !== undefined) configUpdate.gemini_voice = this.state.settings.geminiVoice;
+
+                    if (Object.keys(configUpdate).length > 0) {
+                        await setDoc(doc(this.db, "users", uid, "settings", "config"), configUpdate, { merge: true });
                     }
 
                     // 2. Save App Data
@@ -3192,6 +3195,9 @@ ${userText}
                         if (config.gemini_api_key) {
                             this.state.settings.geminiApiKey = config.gemini_api_key;
                         }
+                        if (config.gemini_voice) {
+                            this.state.settings.geminiVoice = config.gemini_voice;
+                        }
                     }
 
                     // 2. Load App Data
@@ -3208,14 +3214,19 @@ ${userText}
                         }
                         
                         if (content.settings) {
-                            const currentKey = this.state.settings.geminiApiKey; 
+                             const currentKey = this.state.settings.geminiApiKey;
+                             const currentVoice = this.state.settings.geminiVoice;
+
                              this.state.settings = { ...this.state.settings, ...content.settings };
+                             
                              // Prioritize the one from config doc if it existed
                              if (currentKey) this.state.settings.geminiApiKey = currentKey;
+                             if (currentVoice) this.state.settings.geminiVoice = currentVoice;
                         }
 
                         this.saveSettings();
                         this.updateSettingsUI();
+                        this.updateGeminiUI();
                         this.parseCards();
                         
                         this.state.lastSavedSnapshot = JSON.stringify(this.getSyncPayload());
