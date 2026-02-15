@@ -383,6 +383,62 @@
         </div>
     </div>
 
+    <!-- Setup Screen -->
+    <div id="setup-screen" class="fixed inset-0 z-[300] hidden bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
+        <div class="w-full max-w-lg bg-white dark:bg-gray-800 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col">
+            <!-- Header -->
+            <div class="p-8 bg-blue-600 dark:bg-blue-800 text-white flex flex-col items-center text-center space-y-4">
+                <div class="w-16 h-16 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center text-4xl font-serif shadow-inner">文</div>
+                <div>
+                    <h1 class="text-2xl font-bold tracking-tight">Welcome to Mandarin Study</h1>
+                    <p class="text-blue-100 text-sm mt-1">Please configure your API keys to continue</p>
+                </div>
+            </div>
+
+            <!-- Content -->
+            <div class="p-8 space-y-6 flex-1 overflow-y-auto max-h-[60vh] custom-scrollbar">
+                
+                <!-- Github Token -->
+                <div class="space-y-3">
+                    <label class="flex items-center gap-2 text-sm font-bold text-gray-900 dark:text-gray-100">
+                        <i data-lucide="github" class="w-4 h-4"></i>
+                        GitHub Token (Mandatory)
+                    </label>
+                    <input type="password" id="setup-github-token" placeholder="ghp_xxxxxxxxxxxx" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-shadow font-mono text-sm">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">Required for cloud synchronization of your library. Create a token with <strong>gist</strong> scope.</p>
+                </div>
+
+                <!-- Gemini API Key -->
+                <div class="space-y-3">
+                    <label class="flex items-center gap-2 text-sm font-bold text-gray-900 dark:text-gray-100">
+                        <i data-lucide="sparkles" class="w-4 h-4"></i>
+                        Gemini API Key (Mandatory)
+                    </label>
+                    <input type="password" id="setup-gemini-key" placeholder="AIzaSy..." class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-shadow font-mono text-sm">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">Required for AI content generation, context examples, and text-to-speech features.</p>
+                </div>
+
+                <!-- Gist ID (Optional) -->
+                <div class="space-y-3 pt-2 border-t border-gray-100 dark:border-gray-700">
+                    <label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <i data-lucide="file-code" class="w-4 h-4"></i>
+                        Gist ID (Optional)
+                    </label>
+                    <input type="text" id="setup-gist-id" placeholder="Existing Gist ID (optional)" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-shadow font-mono text-sm">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Leave empty to create a new Gist automatically.</p>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="p-6 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-100 dark:border-gray-800 flex justify-end">
+                <button onclick="app.submitSetup()" class="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-600/20 font-bold transition-all active:scale-95 flex items-center gap-2">
+                    <span>Start Learning</span>
+                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Custom Dialog Modal -->
     <div id="custom-dialog" class="fixed inset-0 z-[200] hidden">
         <!-- Backdrop -->
@@ -1119,8 +1175,13 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                     dialogMessage: document.getElementById('dialog-message'),
                     dialogIcon: document.getElementById('dialog-icon'),
                     dialogIconContainer: document.getElementById('dialog-icon-container'),
-                    btnDialogConfirm: document.getElementById('btn-dialog-confirm'),
                     btnDialogCancel: document.getElementById('btn-dialog-cancel'),
+
+                    // Setup Elements
+                    setupScreen: document.getElementById('setup-screen'),
+                    setupGithub: document.getElementById('setup-github-token'),
+                    setupGemini: document.getElementById('setup-gemini-key'),
+                    setupGist: document.getElementById('setup-gist-id'),
                 };
 
                 this.init();
@@ -1135,14 +1196,33 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                     this.state.segmenter = new Intl.Segmenter('zh-CN', { granularity: 'word' });
                 }
 
-                // 1. Load Library from Memory
-                this.loadLocalLibrary(); 
-
                 // Theme Init
                 if (this.state.darkMode) document.documentElement.classList.add('dark');
+
+                // Check Credentials
+                const { githubToken, geminiApiKey } = this.state.settings;
                 
-                // Event Listeners
-                this.setupEventListeners();
+                if (!githubToken || !geminiApiKey) {
+                    this.elements.setupScreen.classList.remove('hidden');
+                    if (githubToken) this.elements.setupGithub.value = githubToken;
+                    if (geminiApiKey) this.elements.setupGemini.value = geminiApiKey;
+                    if (this.state.settings.gistId) this.elements.setupGist.value = this.state.settings.gistId;
+                    
+                    this.setupEventListeners();
+                    lucide.createIcons(); // Render icons on setup screen
+                    return;
+                }
+
+                this.startApp();
+            }
+
+            startApp() {
+                // Check if already running to prevent double init
+                if (this.state.isRunning) return;
+                this.state.isRunning = true;
+
+                // 1. Load Library from Memory
+                this.loadLocalLibrary(); 
 
                 // Initial UI Render
                 this.updateModeUI();
@@ -1174,6 +1254,41 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                         e.returnValue = ''; 
                     }
                 });
+            }
+
+            async submitSetup() {
+                const token = this.elements.setupGithub.value.trim();
+                const apiKey = this.elements.setupGemini.value.trim();
+                const gistId = this.elements.setupGist.value.trim();
+
+                if (!token) {
+                    alert("Please enter a GitHub Token.");
+                    return;
+                }
+                if (!apiKey) {
+                    alert("Please enter a Gemini API Key.");
+                    return;
+                }
+
+                // Update State
+                this.state.settings.githubToken = token;
+                this.state.settings.geminiApiKey = apiKey;
+                if (gistId) this.state.settings.gistId = gistId;
+
+                // Update UI elements in settings modals to match
+                if (this.elements.inputGeminiKey) this.elements.inputGeminiKey.value = apiKey;
+                
+                // Persist
+                this.saveSettings(); // Saves github token
+                
+                // Manually save Gemini key to avoid overwriting from empty modal inputs
+                localStorage.setItem('hanzi_gemini_key', apiKey);
+                
+                // Hide Setup
+                this.elements.setupScreen.classList.add('hidden');
+                
+                // Start App
+                await this.startApp();
             }
 
             loadLocalLibrary() {
