@@ -452,15 +452,25 @@
         
         <!-- Library View -->
         <div id="view-library" class="flex-1 flex flex-col w-full h-full animate-in fade-in duration-300 overflow-y-auto hidden">
-             <div class="flex items-center justify-between mb-8 sticky top-0 bg-gray-50 dark:bg-gray-900 z-10 py-2">
+             <div class="flex items-center justify-between mb-8 sticky top-0 bg-gray-50 dark:bg-gray-900 z-10 py-2 gap-4 flex-wrap">
                 <div>
                     <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">My Library</h2>
                     <p class="text-gray-500 dark:text-gray-400">Manage your study texts</p>
                 </div>
-                <button onclick="app.showCreateTextDialog()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-600/20 flex items-center gap-2 transition-all active:scale-95">
-                    <i data-lucide="plus" class="w-5 h-5"></i>
-                    <span class="hidden sm:inline">New Text</span>
-                </button>
+                <div class="flex items-center gap-2 flex-wrap">
+                     <div class="relative">
+                        <input type="text" id="input-library-search" placeholder="Search title..." class="pl-9 pr-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 w-full md:w-48 transition-shadow">
+                        <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                    </div>
+                    <label class="flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors select-none">
+                        <input type="checkbox" id="checkbox-library-not-done" class="rounded text-blue-600 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600">
+                        <span class="text-sm text-gray-700 dark:text-gray-300">Not Done</span>
+                    </label>
+                    <button onclick="app.showCreateTextDialog()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-600/20 flex items-center gap-2 transition-all active:scale-95">
+                        <i data-lucide="plus" class="w-5 h-5"></i>
+                        <span class="hidden sm:inline">New Text</span>
+                    </button>
+                </div>
             </div>
             
             <div id="library-loading" class="hidden flex flex-col items-center justify-center py-20 text-center">
@@ -599,6 +609,14 @@
                         <span class="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none hidden md:block z-50">Writing Exercise</span>
                         <button id="btn-toggle-writing" onclick="app.toggleWriting()" class="w-10 h-10 rounded-xl flex items-center justify-center transition-all shadow-sm bg-white dark:bg-gray-800 text-pink-600 dark:text-pink-400 hover:text-pink-700 dark:hover:text-pink-300 border border-gray-200 dark:border-gray-700">
                             <i data-lucide="pen-tool" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+
+                    <!-- Mark as Done -->
+                    <div class="group relative flex items-center">
+                        <span class="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none hidden md:block z-50">Mark as Done</span>
+                        <button id="btn-mark-done" onclick="app.handlers.markAsDone()" class="w-10 h-10 rounded-xl flex items-center justify-center transition-all shadow-sm bg-white dark:bg-gray-800 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 border border-gray-200 dark:border-gray-700">
+                            <i id="icon-mark-done" data-lucide="check-circle" class="w-5 h-5"></i>
                         </button>
                     </div>
                 </div>
@@ -951,7 +969,30 @@
                             this.setMode('library');
                         } catch (e) { console.error(e); }
                     },
-                    forceSync: () => this.saveToFirestore()
+                    forceSync: () => this.saveToFirestore(),
+                    markAsDone: async () => {
+                        const id = this.state.activeTextId;
+                        if (!id) return;
+                        
+                        const item = this.state.library.find(i => i.id === id);
+                        if (!item) return;
+
+                        if (item.isDone) {
+                            const confirmed = await this.showConfirm("This text is currently marked as done. Do you want to mark it as NOT done?", "Result: Not Done");
+                            if (confirmed) {
+                                item.isDone = false;
+                                this.updateMarkDoneButton(false);
+                                this.saveToFirestore();
+                            }
+                        } else {
+                             const confirmed = await this.showConfirm("Congratulations! Are you sure you want to mark this text as completely studied?", "Mark as Done?");
+                             if (confirmed) {
+                                item.isDone = true;
+                                this.updateMarkDoneButton(true);
+                                this.saveToFirestore();
+                             }
+                        }
+                    }
                 };
 
                 // Initialize Cache
@@ -966,9 +1007,11 @@
                     
                     // Library State
                     mode: 'library', // 'library', 'view', 'input', 'ai' (input/ai are now sub-states or dialogs mostly)
-                    library: [], // Array of { id, title, content, quizData, writingData, writingResult, contextData, lastOpened }
+                    library: [], // Array of { id, title, content, quizData, writingData, writingResult, contextData, lastOpened, isDone }
                     activeTextId: null,
-
+                    librarySearch: '',
+                    libraryFilterNotDone: false,
+                    
                     // Active Text Session Buffers (Loaded from Library)
                     text: "", 
                     cards: [],
@@ -1029,6 +1072,8 @@
                     libraryEmpty: document.getElementById('library-empty'),
                     libraryLoading: document.getElementById('library-loading'),
                     btnModeLibrary: document.getElementById('btn-mode-library'), // New btn
+                    inputLibrarySearch: document.getElementById('input-library-search'),
+                    checkboxLibraryNotDone: document.getElementById('checkbox-library-not-done'),
                     
                     // Create Text Elements
                     dialogCreateText: document.getElementById('dialog-create-text'),
@@ -1109,6 +1154,8 @@
                     btnTogglePinyinTop: document.getElementById('btn-toggle-pinyin-top'),
                     btnToggleStrokeOrder: document.getElementById('btn-toggle-stroke-order'),
                     btnToggleTranslation: document.getElementById('btn-toggle-translation'),
+                    btnMarkDone: document.getElementById('btn-mark-done'),
+                    iconMarkDone: document.getElementById('icon-mark-done'),
 
                     // Contextual Examples Elements
                     sectionContext: document.getElementById('section-context'),
@@ -1345,6 +1392,21 @@
                         this.saveSettings();
                     });
                 }
+                
+                // Library Filters
+                if (this.elements.inputLibrarySearch) {
+                    this.elements.inputLibrarySearch.addEventListener('input', (e) => {
+                        this.state.librarySearch = e.target.value.toLowerCase();
+                        this.renderLibrary();
+                    });
+                }
+
+                if (this.elements.checkboxLibraryNotDone) {
+                    this.elements.checkboxLibraryNotDone.addEventListener('change', (e) => {
+                        this.state.libraryFilterNotDone = e.target.checked;
+                        this.renderLibrary();
+                    });
+                }
 
                 // Markdown Input
                 if (this.elements.markdownInput) {
@@ -1393,6 +1455,32 @@
                 });
             }
 
+            // --- Dialogs & Alerts ---
+            // (Functionality moved to bottom of class to consolidate with Promise-based system)
+
+
+            closeDialog() {
+                if (this.elements.dialog) {
+                    this.elements.dialog.classList.add('hidden');
+                    this.elements.btnDialogCancel.classList.add('hidden'); // Reset
+                }
+            }
+
+            updateMarkDoneButton(isDone) {
+                const btn = this.elements.btnMarkDone;
+                const icon = this.elements.iconMarkDone;
+                if (!btn) return;
+                
+                if (isDone) {
+                    btn.classList.add('bg-emerald-600', 'text-white', 'hover:bg-emerald-700', 'shadow-md', 'border-emerald-600');
+                    btn.classList.remove('bg-white', 'text-emerald-600', 'hover:text-emerald-700', 'dark:bg-gray-800', 'dark:text-emerald-400', 'dark:hover:text-emerald-300', 'border-gray-200', 'dark:border-gray-700');
+                    // Icon logic if any
+                } else {
+                    btn.classList.remove('bg-emerald-600', 'text-white', 'hover:bg-emerald-700', 'shadow-md', 'border-emerald-600');
+                    btn.classList.add('bg-white', 'text-emerald-600', 'hover:text-emerald-700', 'dark:bg-gray-800', 'dark:text-emerald-400', 'dark:hover:text-emerald-300', 'border-gray-200', 'dark:border-gray-700');
+                }
+            }
+
             // --- Library Management ---
 
             renderLibrary() {
@@ -1414,10 +1502,32 @@
                     empty.classList.remove('hidden');
                     return;
                 }
-                empty.classList.add('hidden');
+                
+                // Filter
+                let filtered = this.state.library;
+                
+                if (this.state.librarySearch) {
+                    const term = this.state.librarySearch;
+                    filtered = filtered.filter(item => item.title.toLowerCase().includes(term) || item.content.toLowerCase().includes(term));
+                }
+
+                if (this.state.libraryFilterNotDone) {
+                    filtered = filtered.filter(item => !item.isDone);
+                }
+
+                if (filtered.length === 0) {
+                    // Show "No results" potentially?
+                    // For now, let's just show empty or a custom "No match" message?
+                    // Or keep the empty state but maybe change text?
+                    // Let's create a temporary "empty search" element on the fly or just use empty list logic.
+                    // But libraryEmpty says "Create your first study text".
+                    // Let's just leave list empty for now.
+                } else {
+                    empty.classList.add('hidden');
+                }
 
                 // Sort by Created At (desc), fallback to lastOpened
-                const sorted = [...this.state.library].sort((a, b) => {
+                const sorted = [...filtered].sort((a, b) => {
                     const timeA = a.createdAt || a.lastOpened || 0;
                     const timeB = b.createdAt || b.lastOpened || 0;
                     return timeB - timeA;
@@ -1425,16 +1535,19 @@
 
                 sorted.forEach(item => {
                     const card = document.createElement('div');
-                    card.className = "bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-all border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col group h-full relative";
+                    card.className = `bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-all border ${item.isDone ? 'border-emerald-200 dark:border-emerald-900 ring-1 ring-emerald-100 dark:ring-emerald-900/50' : 'border-gray-100 dark:border-gray-700'} overflow-hidden flex flex-col group h-full relative`;
 
                     const preview = item.content.substring(0, 100).replace(/[*#]/g, '') + '...';
                     
                     const d = new Date(item.createdAt || item.lastOpened || Date.now());
                     const date = `${d.getDate()}/${d.toLocaleString('en-US', { month: 'short' }).toLowerCase()}/${d.getFullYear()}`;
 
+                    const doneBadge = item.isDone ? `<div class="absolute top-4 right-4 text-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 p-1 rounded-full"><i data-lucide="check" class="w-4 h-4"></i></div>` : '';
+
                     card.innerHTML = `
+                         ${doneBadge}
                          <div class="p-6 flex-1 cursor-pointer hover:bg-gray-50/50 dark:hover:bg-gray-700/50 transition-colors" onclick="app.openText('${item.id}')">
-                            <h3 class="font-bold text-lg text-gray-900 dark:text-white mb-2 line-clamp-1">${item.title}</h3>
+                            <h3 class="font-bold text-lg text-gray-900 dark:text-white mb-2 line-clamp-1 pr-6">${item.title}</h3>
                             <p class="text-sm text-gray-500 dark:text-gray-400 line-clamp-3 leading-relaxed">${preview}</p>
                         </div>
                         <div class="px-6 py-4 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-100 dark:border-gray-800 flex justify-between items-center text-xs text-gray-400">
@@ -1493,6 +1606,9 @@
                 this.elements.markdownInput.value = this.state.text;
                 this.state.isQuizActive = false;
                 this.state.isWritingActive = false;
+                
+                // Update Done Button
+                this.updateMarkDoneButton(item.isDone);
                 
                 // Reset Quiz/Writing UI containers to prevent showing old data briefly
                 this.elements.quizQuestions.innerHTML = '';
