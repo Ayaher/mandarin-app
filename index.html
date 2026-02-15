@@ -463,6 +463,12 @@
                 </button>
             </div>
             
+            <div id="library-loading" class="hidden flex flex-col items-center justify-center py-20 text-center">
+                <i data-lucide="loader-2" class="w-10 h-10 text-blue-600 animate-spin mb-4"></i>
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Loading Library...</h3>
+                <p class="text-gray-500 dark:text-gray-400 max-w-sm mx-auto">Syncing your data from the cloud.</p>
+            </div>
+
             <div id="library-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20">
                 <!-- Library Items Injected Here -->
             </div>
@@ -516,6 +522,11 @@
 
         <!-- Study View -->
         <div id="view-study" class="flex-1 flex flex-col max-w-4xl mx-auto w-full animate-in fade-in duration-300 relative">
+            
+            <!-- Study Title -->
+            <div class="mb-2 px-1">
+                 <h2 id="study-title" class="text-xl font-bold text-gray-900 dark:text-white truncate"></h2>
+            </div>
             
             <!-- Progress Bar -->
             <div class="mb-6">
@@ -951,6 +962,7 @@
                     user: null,
                     lastSavedSnapshot: null, // For Sync tracking
                     isSaving: false,
+                    isLibraryLoading: false,
                     
                     // Library State
                     mode: 'library', // 'library', 'view', 'input', 'ai' (input/ai are now sub-states or dialogs mostly)
@@ -1015,6 +1027,7 @@
                     viewLibrary: document.getElementById('view-library'),
                     libraryList: document.getElementById('library-list'),
                     libraryEmpty: document.getElementById('library-empty'),
+                    libraryLoading: document.getElementById('library-loading'),
                     btnModeLibrary: document.getElementById('btn-mode-library'), // New btn
                     
                     // Create Text Elements
@@ -1082,6 +1095,7 @@
                     progressFill: document.getElementById('progress-fill'),
                     progressCurrent: document.getElementById('progress-current'),
                     progressTotal: document.getElementById('progress-total'),
+                    studyTitle: document.getElementById('study-title'), // New Field
                     footerCounter: document.getElementById('footer-counter'),
                     btnNext: document.getElementById('btn-next'),
                     btnPrev: document.getElementById('btn-prev'),
@@ -1384,7 +1398,17 @@
             renderLibrary() {
                 const list = this.elements.libraryList;
                 const empty = this.elements.libraryEmpty;
+                const loading = this.elements.libraryLoading;
+                
+                // Hide lists initially
                 list.innerHTML = '';
+                empty.classList.add('hidden');
+
+                if (this.state.isLibraryLoading) {
+                    loading.classList.remove('hidden');
+                    return;
+                }
+                loading.classList.add('hidden');
 
                 if (this.state.library.length === 0) {
                     empty.classList.remove('hidden');
@@ -1449,6 +1473,12 @@
                 this.state.writingData = item.writingData || null;
                 this.state.writingResult = item.writingResult || null;
                 this.state.contextData = item.contextData || {};
+
+                // Set Title
+                if (this.elements.studyTitle) {
+                    this.elements.studyTitle.textContent = item.title;
+                    this.elements.studyTitle.title = item.title; // Tooltip for truncated
+                }
                 
                 // IMPORTANT: Load Progress & Reset UI Inputs
                 this.state.userAnswers = item.userAnswers || {};
@@ -1682,6 +1712,10 @@
                         if (this.state.activeTextId === this.state.editingId) {
                             this.state.text = content;
                             this.elements.markdownInput.value = content;
+                            if (this.elements.studyTitle) {
+                                this.elements.studyTitle.textContent = title;
+                                this.elements.studyTitle.title = title;
+                            }
                             this.parseCards();
                         }
                     }
@@ -3006,7 +3040,9 @@ ${userText}
                 if (!this.state.user) return;
                 const uid = this.state.user.uid;
 
-                this.state.isSaving = true;
+                // Set Loading State
+                this.state.isLibraryLoading = true;
+                this.renderLibrary(); // Re-render to show loading spinner
                 this.updateSyncUI();
 
                 try {
@@ -3052,6 +3088,8 @@ ${userText}
                     if (!isInitial) await this.showAlert("Load failed", "Error");
                 } finally {
                     this.state.isSaving = false;
+                    this.state.isLibraryLoading = false;
+                    this.renderLibrary(); // Re-render to show content
                     this.updateSyncUI();
                 }
             }
