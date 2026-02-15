@@ -1305,31 +1305,35 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                 }
                 empty.classList.add('hidden');
 
-                // Sort by last opened (desc)
-                const sorted = [...this.state.library].sort((a, b) => (b.lastOpened || 0) - (a.lastOpened || 0));
+                // Sort by Created At (desc), fallback to lastOpened
+                const sorted = [...this.state.library].sort((a, b) => {
+                    const timeA = a.createdAt || a.lastOpened || 0;
+                    const timeB = b.createdAt || b.lastOpened || 0;
+                    return timeB - timeA;
+                });
 
                 sorted.forEach(item => {
                     const card = document.createElement('div');
-                    card.className = "bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-all border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col group cursor-pointer h-full relative";
-                    card.onclick = (e) => {
-                        // Prevent click if clicking delete
-                        if (e.target.closest('.btn-delete')) return;
-                        this.openText(item.id);
-                    };
+                    card.className = "bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-all border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col group h-full relative";
 
                     const preview = item.content.substring(0, 100).replace(/[*#]/g, '') + '...';
-                    const date = new Date(item.lastOpened || Date.now()).toLocaleDateString();
+                    const date = new Date(item.createdAt || item.lastOpened || Date.now()).toLocaleDateString();
 
                     card.innerHTML = `
-                        <div class="p-6 flex-1">
+                         <div class="p-6 flex-1 cursor-pointer hover:bg-gray-50/50 dark:hover:bg-gray-700/50 transition-colors" onclick="app.openText('${item.id}')">
                             <h3 class="font-bold text-lg text-gray-900 dark:text-white mb-2 line-clamp-1">${item.title}</h3>
                             <p class="text-sm text-gray-500 dark:text-gray-400 line-clamp-3 leading-relaxed">${preview}</p>
                         </div>
                         <div class="px-6 py-4 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-100 dark:border-gray-800 flex justify-between items-center text-xs text-gray-400">
-                            <span>Opened: ${date}</span>
-                            <button class="btn-delete p-2 rounded-lg hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 dark:hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100" onclick="app.deleteText('${item.id}')">
-                                <i data-lucide="trash-2" class="w-4 h-4"></i>
-                            </button>
+                            <span>Since: ${date}</span>
+                            <div class="flex items-center gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button class="p-2 rounded-lg hover:bg-blue-100 hover:text-blue-600 dark:hover:bg-blue-900/30 dark:hover:text-blue-400 transition-colors" onclick="app.showCreateTextDialog('${item.id}')" title="Edit Text">
+                                    <i data-lucide="edit-2" class="w-4 h-4"></i>
+                                </button>
+                                <button class="btn-delete p-2 rounded-lg hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 dark:hover:text-red-400 transition-colors" onclick="app.deleteText('${item.id}')" title="Delete Text">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </div>
                         </div>
                     `;
                     list.appendChild(card);
@@ -1428,16 +1432,33 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
 
             // --- Create Text Logic ---
             
-            showCreateTextDialog() {
+            showCreateTextDialog(editId = null) {
+                this.state.editingId = editId;
+                const mode = editId ? 'manual' : 'manual';
+                this.setCreateMode(mode);
+                
+                if (editId) {
+                    const item = this.state.library.find(i => i.id === editId);
+                    if (item) {
+                       this.elements.inputCreateTitle.value = item.title;
+                       this.elements.inputCreateContent.value = item.content;
+                       this.elements.labelCreateSubmit.textContent = "Update Text";
+                    }
+                } else {
+                    this.elements.inputCreateTitle.value = '';
+                    this.elements.inputCreateContent.value = '';
+                    this.elements.inputCreateAiPrompt.value = '';
+                    this.elements.labelCreateSubmit.textContent = "Create Text";
+                }
+                
                 this.elements.dialogCreateText.classList.remove('hidden');
-                this.elements.inputCreateTitle.value = '';
-                this.elements.inputCreateContent.value = '';
-                this.elements.inputCreateAiPrompt.value = '';
-                this.setCreateMode('manual');
             }
 
             hideCreateTextDialog() {
+                this.state.editingId = null;
                 this.elements.dialogCreateText.classList.add('hidden');
+                // Reset UI
+                this.elements.labelCreateSubmit.textContent = "Create Text";
             }
 
             setCreateMode(mode) {
@@ -1560,11 +1581,36 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
             }
 
             finalizeCreateText(title, content) {
+                if (this.state.editingId) {
+                    // Update specific library item without changing order?
+                    const index = this.state.library.findIndex(item => item.id === this.state.editingId);
+                    if (index !== -1) {
+                        this.state.library[index].title = title;
+                        this.state.library[index].content = content;
+                        this.state.library[index].lastOpened = Date.now(); // Update timestamp
+                        
+                        // If it's the active text, refresh active state without switching view
+                        if (this.state.activeTextId === this.state.editingId) {
+                            this.state.text = content;
+                            this.elements.markdownInput.value = content;
+                            this.parseCards();
+                        }
+                    }
+                    this.state.editingId = null;
+                    this.saveLibraryToLocal();
+                    this.hideCreateTextDialog();
+                    this.renderLibrary(); // Re-render to show changes
+                    this.saveToGist(true);
+                    return;
+                }
+
+                // Create New
                 const newItem = {
                     id: crypto.randomUUID(),
                     title: title,
                     content: content,
                     lastOpened: Date.now(),
+                    createdAt: Date.now(),
                     quizData: null,
                     userAnswers: {},
                     writingData: null,
@@ -1573,11 +1619,11 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                     writingResult: null
                 };
                 
-                this.state.library.unshift(newItem); // Add to top
+                this.state.library.unshift(newItem); 
                 this.saveLibraryToLocal();
                 this.hideCreateTextDialog();
                 this.openText(newItem.id);
-                this.saveToGist(true); // Auto-sync creation (silent)
+                this.saveToGist(true); 
             }
 
             parseCards() {
