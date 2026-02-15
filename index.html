@@ -2276,6 +2276,7 @@ ${userText}
                     quizData: this.state.quizData,
                     writingData: this.state.writingData,
                     writingResult: this.state.writingResult,
+                    contextData: this.state.contextData, // Save Dynamic Examples
                     settings: safeSettings,
                     timestamp: new Date().toISOString()
                 };
@@ -2371,6 +2372,9 @@ ${userText}
                     if (content.writingResult) {
                          this.state.writingResult = content.writingResult;
                          localStorage.setItem('hanzi_writing_result', JSON.stringify(content.writingResult));
+                    }
+                    if (content.contextData) {
+                        this.state.contextData = content.contextData;
                     }
                     
                     if (content.settings) {
