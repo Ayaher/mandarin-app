@@ -915,7 +915,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         const firebaseConfig = {
@@ -3258,16 +3258,19 @@ ${userText}
                             // New: Load individual library documents
                             console.log(`Loading ${content.libraryIndex.length} library items from separate docs...`);
                             
-                            // Note: This makes N reads. For vast libraries, use pagination or collection query.
-                            // But here we rely on the index for order/integrity.
-                            const tasks = content.libraryIndex.map(idxItem => 
-                                getDoc(doc(this.db, "users", uid, "library", idxItem.id))
-                                    .then(snap => snap.exists() ? snap.data() : null)
-                                    .catch(e => { console.error(e); return null; })
-                            );
-                            
-                            const docs = await Promise.all(tasks);
-                            this.state.library = docs.filter(Boolean);
+                            // OPTIMIZATION: Fetch all library items in one request (1 read vs N reads)
+                            // This significantly speeds up initial load
+                            const librarySnapshot = await getDocs(collection(this.db, "users", uid, "library"));
+                            const libraryMap = new Map();
+                            librarySnapshot.forEach(doc => {
+                                libraryMap.set(doc.id, doc.data());
+                            });
+
+                            // Reconstruct library based on index order from settings
+                            // This preserves the user's custom sort order
+                            this.state.library = content.libraryIndex
+                                .map(idxItem => libraryMap.get(idxItem.id))
+                                .filter(Boolean);
                         }
 
                         if (this.state.library.length > 0) {
