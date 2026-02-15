@@ -2213,6 +2213,18 @@ ${userText}
 
             // --- Logic Methods ---
 
+            showToast(message, icon = 'info') {
+                const toast = document.createElement('div');
+                toast.className = 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/80 text-white px-4 py-2 rounded-lg text-sm z-[200] animate-in fade-in zoom-in duration-200 flex items-center shadow-xl backdrop-blur-sm pointer-events-none whitespace-nowrap';
+                toast.innerHTML = `<i data-lucide="${icon}" class="w-4 h-4 inline mr-2 text-blue-400"></i> ${message}`;
+                document.body.appendChild(toast);
+                lucide.createIcons();
+                setTimeout(() => {
+                    toast.classList.add('opacity-0', 'transition-opacity', 'duration-300');
+                    setTimeout(() => toast.remove(), 300);
+                }, 1500);
+            }
+
             toggleSetting(key) {
                 this.state.settings[key] = !this.state.settings[key];
                 this.saveSettings();
@@ -2220,6 +2232,21 @@ ${userText}
                 // If special handling needed
                 if (key === 'pinyinTop' || key === 'pinyinPerChar' || key === 'wordColor' || key === 'strokeOrder' || key === 'showTranslation') {
                     this.renderCard(); // Just re-render card logic
+                    
+                    // Show toast on mobile only
+                    if (window.innerWidth < 768) {
+                        const val = this.state.settings[key];
+                        let msg = "";
+                        
+                        // Map settings to readable messages
+                        if (key === 'wordColor') msg = val ? "Showing Word Colors" : "Removed Word Colors";
+                        else if (key === 'pinyinPerChar') msg = val ? "Showing Pinyin per Character" : "Hidden Pinyin per Character";
+                        else if (key === 'pinyinTop') msg = val ? "Showing Sentence Pinyin" : "Hidden Sentence Pinyin";
+                        else if (key === 'strokeOrder') msg = val ? "Stroke Order Animation: On" : "Stroke Order Animation: Off";
+                        else if (key === 'showTranslation') msg = val ? "Showing Translation" : "Hidden Translation";
+                        
+                        if (msg) this.showToast(msg, val ? 'check' : 'eye-off');
+                    }
                 }
                 
                 this.updateSettingsUI();
