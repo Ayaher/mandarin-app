@@ -949,9 +949,8 @@
                 // Initialize State
                 this.state = {
                     user: null,
-                    lastSavedSnapshot: null, // For Autosave tracking
+                    lastSavedSnapshot: null, // For Sync tracking
                     isSaving: false,
-                    autosaveTimer: null,
                     
                     // Library State
                     mode: 'library', // 'library', 'view', 'input', 'ai' (input/ai are now sub-states or dialogs mostly)
@@ -1249,8 +1248,6 @@
                 this.renderLibrary();
                 lucide.createIcons();
                 
-                this.startAutosave();
-
                 window.addEventListener('beforeunload', (e) => {
                     if (this.checkUnsavedChanges()) {
                         e.preventDefault();
@@ -1342,6 +1339,12 @@
                         this.state.text = e.target.value;
                         this.parseCards();
                         this.updateSyncUI();
+                        
+                        // Debounced Save
+                        if (this.saveDebounceTimer) clearTimeout(this.saveDebounceTimer);
+                        this.saveDebounceTimer = setTimeout(() => {
+                            this.saveToFirestore();
+                        }, 1000); // 1 second debounce
                     });
                 }
 
@@ -1359,6 +1362,12 @@
                     this.elements.writingInput.addEventListener('input', (e) => {
                         const count = e.target.value.length;
                         this.elements.writingInputCharCount.textContent = `${count} characters`;
+                        
+                        // Debounced Save for Draft
+                        if (this.saveDraftDebounceTimer) clearTimeout(this.saveDraftDebounceTimer);
+                        this.saveDraftDebounceTimer = setTimeout(() => {
+                            this.saveToFirestore();
+                        }, 1000);
                     });
                 }
 
@@ -2938,33 +2947,24 @@ ${userText}
                 }
             }
 
-            startAutosave() {
-                if (this.state.autosaveTimer) clearInterval(this.state.autosaveTimer);
-                this.state.autosaveTimer = setInterval(() => {
-                    if (!this.state.isSaving) {
-                        this.saveToFirestore(true);
-                    }
-                }, 60000); // 1 Minute
-            }
-            
-            stopAutosave() {
-                if (this.state.autosaveTimer) {
-                    clearInterval(this.state.autosaveTimer);
-                    this.state.autosaveTimer = null;
-                }
-            }
-
-            async saveToFirestore(isAutosave = false) {
+            async saveToFirestore(force = false) {
                 if (!this.state.user) return;
+                
+                // If already saving, queue a save or ignore?
+                // With immediate save on input (debounced), we might hit this often.
+                // Let's keep it simple: if saving, ignore? Or maybe prevent concurrent saves.
                 if (this.state.isSaving) return;
 
                 const uid = this.state.user.uid;
                 
                 // Check redundancy
-                if (!isAutosave && this.state.lastSavedSnapshot) {
+                // Only save if there are actual changes, unless forced.
+                if (!force && this.state.lastSavedSnapshot) {
                     const hasChanges = this.checkUnsavedChanges();
-                    if (!hasChanges && isAutosave) return; 
-                    // If manual save, we might want to force it? Or warn?
+                    if (!hasChanges) {
+                        // console.log("No changes to save.");
+                        return; 
+                    }
                 }
 
                 this.state.isSaving = true;
@@ -2972,15 +2972,6 @@ ${userText}
 
                 const payload = this.getSyncPayload();
                 const snapshot = JSON.stringify(payload);
-
-                if (isAutosave) {
-                    if (snapshot === this.state.lastSavedSnapshot) {
-                        this.state.isSaving = false;
-                        this.updateSyncUI();
-                        console.log("[Autosave] No changes detected.");
-                        return; 
-                    }
-                }
 
                 try {
                     // 1. Save Config (Gemini Key)
@@ -2999,16 +2990,12 @@ ${userText}
                     });
 
                     this.state.lastSavedSnapshot = snapshot;
-
-                    if (!isAutosave) {
-                        // Optional visual feedback
-                    } else {
-                        console.log("Autosaved at " + new Date().toLocaleTimeString());
-                    }
+                    console.log("Saved at " + new Date().toLocaleTimeString());
 
                 } catch (e) {
                     console.error("Save Error", e);
-                    if (!isAutosave) await this.showAlert("Save failed: " + e.message, "Error");
+                    // Show error in sync UI
+                    // Maybe show a critical error dialog if it persists?
                 } finally {
                     this.state.isSaving = false;
                     this.updateSyncUI();
