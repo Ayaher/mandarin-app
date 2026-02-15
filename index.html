@@ -162,7 +162,7 @@
             </button>
 
             <!-- Sync Status (Visible only if Token set) -->
-            <div id="btn-sync-status" class="hidden relative group mr-1 cursor-pointer" onclick="app.saveToGist()" title="Click to Sync Now">
+            <div id="btn-sync-status" class="hidden relative group mr-1 cursor-pointer" onclick="app.saveToGist()">
                 <div class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                     <i id="icon-sync" data-lucide="cloud" class="w-5 h-5 text-gray-500 dark:text-gray-400"></i>
                     <!-- Status Indicator Dot -->
@@ -666,7 +666,8 @@
                                         <p class="text-xs text-gray-500 dark:text-gray-400">Based on current text</p>
                                     </div>
                                 </div>
-                                <button onclick="app.toggleQuiz()" class="text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                                <button onclick="app.toggleQuiz()" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                                    <i data-lucide="log-out" class="w-4 h-4"></i>
                                     Exit Quiz
                                 </button>
                             </div>
@@ -705,7 +706,8 @@
                                         <p class="text-xs text-gray-500 dark:text-gray-400">Practice your composition skills</p>
                                     </div>
                                 </div>
-                                <button onclick="app.toggleWriting()" class="text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                                <button onclick="app.toggleWriting()" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                                    <i data-lucide="log-out" class="w-4 h-4"></i>
                                     Exit Writing
                                 </button>
                             </div>
@@ -2443,8 +2445,7 @@ ${userText}
                 if (!isAutosave && gistId && this.state.lastSavedSnapshot) {
                     const hasChanges = this.checkUnsavedChanges();
                     if (!hasChanges) {
-                         // Show "Already synced"
-                         await this.showAlert("No changes detected since last sync.", "Already Synced");
+                         // Already synced, do nothing
                          return;
                     }
                 }
