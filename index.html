@@ -161,6 +161,23 @@
                 <i data-lucide="info" class="w-5 h-5"></i>
             </button>
 
+            <!-- Sync Status (Visible only if Token set) -->
+            <div id="btn-sync-status" class="hidden relative group mr-1 cursor-pointer" onclick="app.saveToGist()" title="Click to Sync Now">
+                <div class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                    <i id="icon-sync" data-lucide="cloud" class="w-5 h-5 text-gray-500 dark:text-gray-400"></i>
+                    <!-- Status Indicator Dot -->
+                    <span id="dot-sync-status" class="absolute top-2 right-2 flex h-2 w-2">
+                        <span id="dot-sync-ping" class="hidden animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                        <span id="dot-sync-color" class="relative inline-flex rounded-full h-2 w-2 bg-gray-400"></span>
+                    </span>
+                </div>
+                
+                <!-- Tooltip -->
+                <div id="tooltip-sync" class="absolute top-full right-0 mt-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                    Not Synced
+                </div>
+            </div>
+
             <!-- Settings Toggle -->
             <button id="btn-settings" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 transition-colors" onclick="app.toggleSettings()">
                 <i data-lucide="settings" class="w-5 h-5"></i>
@@ -865,6 +882,10 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
 
                 // Initialize State
                 this.state = {
+                    lastSavedSnapshot: null, // For Autosave tracking
+                    isSaving: false,
+                    autosaveTimer: null,
+                    
                     mode: 'view', // 'view', 'input', 'ai'
                     text: localStorage.getItem('hanzi_text') || DEFAULT_TEXT,
                     cards: [],
@@ -942,6 +963,11 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                     inputGistId: document.getElementById('input-gist-id'),
                     btnSaveCloud: document.getElementById('btn-save-cloud'),
                     btnLoadCloud: document.getElementById('btn-load-cloud'),
+                    // Sync Status
+                    btnSyncStatus: document.getElementById('btn-sync-status'),
+                    dotSyncColor: document.getElementById('dot-sync-color'),
+                    dotSyncPing: document.getElementById('dot-sync-ping'),
+                    tooltipSync: document.getElementById('tooltip-sync'),
                     
                     inputHanziSize: document.getElementById('input-hanzi-size'),
                     inputLatinSize: document.getElementById('input-latin-size'),
@@ -1075,6 +1101,35 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                 
                 // Initialize Icons
                 lucide.createIcons();
+                
+                // Initial Cloud Sync Check
+                if (this.state.settings.githubToken && this.state.settings.gistId) {
+                    // Start by assuming we are synced if we have creds, to avoid immediate red dot
+                    // However, we need the snapshot to be sure.
+                    // If we don't load from cloud, we don't know the cloud state.
+                    // But if we want to avoid overwriting local changes blindly...
+                    // The user requested: "immediatly gets the app data"
+                    this.loadFromGist(true); // true = silent/initial load
+                } else {
+                    // No cloud config, so we are "locally saved" effectively, or just no sync.
+                    // If no token, updateSyncUI handles hiding the button.
+                    this.updateSyncUI();
+                }
+
+                // Start Auto-Save Loop
+                this.startAutosave();
+
+                // Warn on Unsaved Changes
+                window.addEventListener('beforeunload', (e) => {
+                    if (this.checkUnsavedChanges()) {
+                        e.preventDefault();
+                        e.returnValue = ''; // Standard for most browsers
+                        
+                        // Try to trigger a save if possible, or at least let the user know
+                        // Note: Browsers are restrictive about what can be done here.
+                        // The default dialog will be shown.
+                    }
+                });
             }
 
             initConverters() {
@@ -1118,6 +1173,7 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                     this.state.text = e.target.value;
                     localStorage.setItem('hanzi_text', this.state.text);
                     this.parseCards();
+                    this.updateSyncUI();
                 });
 
                 // AI Input Character Counter
@@ -2292,31 +2348,139 @@ ${userText}
                 this.elements.selectGeminiVoice.value = this.state.settings.geminiVoice;
             }
 
-            async saveToGist() {
-                const { githubToken, gistId } = this.state.settings;
-                if (!githubToken) return this.showAlert("Please enter a GitHub Token.", "Token Required");
-
+            // --- Auto-Save Logic ---
+            getSyncPayload() {
                 const { geminiApiKey, githubToken: _, gistId: __, geminiVoice, ...safeSettings } = this.state.settings;
-                
-                const payload = {
+                return {
                     text: this.state.text,
                     quizData: this.state.quizData,
                     writingData: this.state.writingData,
                     writingResult: this.state.writingResult,
-                    contextData: this.state.contextData, // Save Dynamic Examples
-                    settings: safeSettings,
-                    timestamp: new Date().toISOString()
+                    contextData: this.state.contextData, 
+                    settings: safeSettings
                 };
+            }
 
+            checkUnsavedChanges() {
+                if (!this.state.lastSavedSnapshot) return true; // Treat as unsaved until proven otherwise (e.g. loaded/saved)
+                const currentSnapshot = JSON.stringify(this.getSyncPayload());
+                return currentSnapshot !== this.state.lastSavedSnapshot;
+            }
+
+            updateSyncUI() {
+                const { githubToken } = this.state.settings;
+                
+                // Hide if no token
+                if (!githubToken) {
+                    if (this.elements.btnSyncStatus) this.elements.btnSyncStatus.classList.add('hidden');
+                    return;
+                }
+                
+                if (this.elements.btnSyncStatus) this.elements.btnSyncStatus.classList.remove('hidden');
+
+                const hasChanges = this.checkUnsavedChanges();
+                const isSaving = this.state.isSaving;
+                const dotColor = this.elements.dotSyncColor;
+                const dotPing = this.elements.dotSyncPing;
+                const tooltip = this.elements.tooltipSync;
+                const btn = this.elements.btnSyncStatus;
+                
+                if (!dotColor || !dotPing || !tooltip || !btn) return;
+
+                if (isSaving) {
+                    // Syncing
+                    dotColor.className = "relative inline-flex rounded-full h-2 w-2 bg-yellow-500";
+                    dotPing.className = "animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75";
+                    dotPing.classList.remove('hidden');
+                    tooltip.textContent = "Syncing...";
+                    btn.classList.remove('cursor-pointer');
+                    btn.classList.add('cursor-default');
+                } else if (hasChanges) {
+                    // Changed
+                    dotColor.className = "relative inline-flex rounded-full h-2 w-2 bg-orange-500";
+                    dotPing.classList.add('hidden');
+                    tooltip.textContent = "Changes detected - Click to sync";
+                    btn.classList.add('cursor-pointer');
+                    btn.classList.remove('cursor-default');
+                } else {
+                    // Synced
+                    dotColor.className = "relative inline-flex rounded-full h-2 w-2 bg-green-500";
+                    dotPing.classList.add('hidden');
+                    tooltip.textContent = "Synced to Cloud";
+                    btn.classList.remove('cursor-pointer');
+                    btn.classList.add('cursor-default');
+                }
+            }
+
+            startAutosave() {
+                if (this.state.autosaveTimer) clearInterval(this.state.autosaveTimer);
+                this.state.autosaveTimer = setInterval(() => {
+                    if (!this.state.isSaving) {
+                        this.saveToGist(true);
+                    }
+                }, 60000); // 1 Minute
+            }
+            
+            stopAutosave() {
+                if (this.state.autosaveTimer) {
+                    clearInterval(this.state.autosaveTimer);
+                    this.state.autosaveTimer = null;
+                }
+            }
+
+            async saveToGist(isAutosave = false) {
+                if (this.state.isSaving) return; // Prevent concurrent saves.
+
+                const { githubToken, gistId } = this.state.settings;
+
+                // Check for redundant manual save
+                // Only if we have a gistId (edit mode) AND lastSavedSnapshot is set (we know state)
+                if (!isAutosave && gistId && this.state.lastSavedSnapshot) {
+                    const hasChanges = this.checkUnsavedChanges();
+                    if (!hasChanges) {
+                         // Show "Already synced"
+                         await this.showAlert("No changes detected since last sync.", "Already Synced");
+                         return;
+                    }
+                }
+                
+                this.state.isSaving = true;
+                this.updateSyncUI();
+
+                if (!githubToken) {
+                    this.state.isSaving = false;
+                    this.updateSyncUI();
+                    if (isAutosave) return;
+                    return this.showAlert("Please enter a GitHub Token.", "Token Required");
+                }
+
+                const payload = this.getSyncPayload();
+                const snapshot = JSON.stringify(payload);
+
+                if (isAutosave) {
+                    if (snapshot === this.state.lastSavedSnapshot) {
+                        this.state.isSaving = false;
+                        this.updateSyncUI();
+                        console.log("[Autosave] No changes detected, skipping.");
+                        return; 
+                    }
+                }
+
+                const requestPayload = { ...payload, timestamp: new Date().toISOString() };
+                
                 const files = {
                     "mandarin_app_data.json": {
-                        content: JSON.stringify(payload, null, 2)
+                        content: JSON.stringify(requestPayload, null, 2)
                     }
                 };
 
-                this.elements.btnSaveCloud.disabled = true;
-                this.elements.btnSaveCloud.innerHTML = '<i class="animate-spin" data-lucide="loader-2"></i> Saving...';
-                lucide.createIcons();
+                if (!isAutosave) {
+                    this.elements.btnSaveCloud.disabled = true;
+                    this.elements.btnSaveCloud.innerHTML = '<i class="animate-spin" data-lucide="loader-2"></i> Saving...';
+                    lucide.createIcons();
+                } else {
+                    // Subtle indicator could be added here
+                }
 
                 try {
                     const url = gistId ? `https://api.github.com/gists/${gistId}` : `https://api.github.com/gists`;
@@ -2346,25 +2510,48 @@ ${userText}
                         this.saveSettings();
                     }
 
-                    await this.showAlert("Data saved to Cloud successfully!", "Sync Complete");
+                    this.state.lastSavedSnapshot = snapshot;
+
+                    if (!isAutosave) {
+                        await this.showAlert("Data saved to Cloud successfully!", "Sync Complete");
+                    } else {
+                        console.log("Autosaved at " + new Date().toLocaleTimeString());
+                    }
 
                 } catch (e) {
                     console.error(e);
-                    await this.showAlert("Failed to save to Cloud. Check your token.", "Error");
+                    if (!isAutosave) {
+                        await this.showAlert("Failed to save to Cloud. Check your token.", "Error");
+                    }
                 } finally {
-                    this.elements.btnSaveCloud.disabled = false;
-                    this.elements.btnSaveCloud.innerHTML = '<i data-lucide="upload-cloud"></i> Save';
-                    lucide.createIcons();
+                    this.state.isSaving = false;
+                    this.updateSyncUI();
+                    
+                    if (!isAutosave) {
+                        this.elements.btnSaveCloud.disabled = false;
+                        this.elements.btnSaveCloud.innerHTML = '<i data-lucide="upload-cloud"></i> Save';
+                        lucide.createIcons();
+                    }
                 }
             }
 
-            async loadFromGist() {
+            async loadFromGist(isInitial = false) {
                 const { githubToken, gistId } = this.state.settings;
-                if (!githubToken || !gistId) return this.showAlert("Token and Gist ID required.", "Missing Credentials");
+                
+                if (!githubToken || !gistId) {
+                    if (isInitial) return;
+                    return this.showAlert("Token and Gist ID required.", "Missing Credentials");
+                }
 
-                this.elements.btnLoadCloud.disabled = true;
-                this.elements.btnLoadCloud.innerHTML = '<i class="animate-spin" data-lucide="loader-2"></i> Loading...';
-                lucide.createIcons();
+                if (!isInitial) {
+                    this.elements.btnLoadCloud.disabled = true;
+                    this.elements.btnLoadCloud.innerHTML = '<i class="animate-spin" data-lucide="loader-2"></i> Loading...';
+                    lucide.createIcons();
+                } else {
+                    // Show syncing status
+                    this.state.isSaving = true; // Use this flag to show spinner
+                    this.updateSyncUI();
+                }
 
                 try {
                     const response = await fetch(`https://api.github.com/gists/${gistId}`, {
@@ -2433,15 +2620,30 @@ ${userText}
                     this.parseCards();
                     this.renderCard();
 
-                    await this.showAlert("Data loaded from Cloud!", "Sync Complete");
+                    // Update Snapshot for Autosave
+                    // When loading from cloud, we consider this the "clean" state.
+                    this.state.lastSavedSnapshot = JSON.stringify(this.getSyncPayload());
+                    
+                    if (!isInitial) {
+                        await this.showAlert("Data loaded from Cloud!", "Sync Complete");
+                    } else {
+                        console.log("Initial data loaded from Gist.");
+                    }
 
                 } catch (e) {
                     console.error(e);
-                    await this.showAlert("Failed to load. Check ID and Token.", "Error");
+                    if (!isInitial) {
+                        await this.showAlert("Failed to load. Check ID and Token.", "Error");
+                    }
                 } finally {
-                    this.elements.btnLoadCloud.disabled = false;
-                    this.elements.btnLoadCloud.innerHTML = '<i data-lucide="download-cloud"></i> Load';
-                    lucide.createIcons();
+                    if (!isInitial) {
+                        this.elements.btnLoadCloud.disabled = false;
+                        this.elements.btnLoadCloud.innerHTML = '<i data-lucide="download-cloud"></i> Load';
+                        lucide.createIcons();
+                    } else {
+                        this.state.isSaving = false;
+                        this.updateSyncUI();
+                    }
                 }
             }
 
@@ -2483,6 +2685,9 @@ ${userText}
                 // Font Style Buttons
                 const activeBtn = ['border-blue-500', 'bg-blue-50', 'text-blue-700', 'dark:bg-blue-900/30', 'dark:text-blue-300', 'dark:border-blue-700'];
                 const inactiveBtn = ['border-gray-200', 'dark:border-gray-700', 'text-gray-600', 'dark:text-gray-300'];
+
+                // Call Sync UI Update
+                this.updateSyncUI();
 
                 if (s.fontStyle === 'sans') {
                     this.elements.btnFontSans.classList.add(...activeBtn);
