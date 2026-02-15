@@ -3076,6 +3076,12 @@ ${userText}
                                 if (item.contextData && Object.keys(item.contextData).length === 0) delete item.contextData;
                             });
                         }
+                        // Also cleanup the new libraryIndex from lastOpened, as it's modified on openText
+                        if (obj.libraryIndex) {
+                            obj.libraryIndex.forEach(item => {
+                                delete item.lastOpened;
+                            });
+                        }
                         return JSON.stringify(obj);
                     } catch (e) {
                         return jsonStr;
