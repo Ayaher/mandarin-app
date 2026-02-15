@@ -1029,22 +1029,22 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
                     writingData: null,
                     writingResult: null,
                     
-                    darkMode: localStorage.getItem('hanzi_theme') === 'dark',
+                    darkMode: false, // Default to light mode (no persistence)
                     settings: {
-                        hanziSize: parseInt(localStorage.getItem('hanzi_size_h')) || 54,
-                        latinSize: parseInt(localStorage.getItem('hanzi_size_l')) || 18,
-                        fontStyle: localStorage.getItem('hanzi_font') || 'sans',
-                        pinyinTop: localStorage.getItem('hanzi_pinyin_top') === 'true',
-                        pinyinPerChar: localStorage.getItem('hanzi_pinyin_char') === 'true',
-                        wordColor: localStorage.getItem('hanzi_word_color') !== 'false',
-                        strokeOrder: localStorage.getItem('hanzi_stroke_order') !== 'false', // Default true
-                        showTranslation: localStorage.getItem('hanzi_show_translation') !== 'false', // Default true
-                        charMode: localStorage.getItem('hanzi_char_mode') || 'original',
-                        geminiApiKey: localStorage.getItem('hanzi_gemini_key') || '',
-                        geminiVoice: localStorage.getItem('hanzi_gemini_voice') || 'Aoede',
+                        hanziSize: 54,
+                        latinSize: 18,
+                        fontStyle: 'sans',
+                        pinyinTop: false,
+                        pinyinPerChar: false,
+                        wordColor: true,
+                        strokeOrder: true,
+                        showTranslation: true,
+                        charMode: 'original',
+                        geminiApiKey: '',
+                        geminiVoice: 'Aoede',
                         // New Fields
-                        githubToken: localStorage.getItem('hanzi_github_token') || '',
-                        gistId: localStorage.getItem('hanzi_gist_id') || ''
+                        githubToken: '',
+                        gistId: ''
                     },
                     currentWriter: null,
                     converters: { toSimp: null, toTrad: null },
@@ -1351,7 +1351,8 @@ The sentence follows a standard **Time + Subject + Verb + Object** structure.
             }
 
             saveLibraryToLocal() {
-                localStorage.setItem('hanzi_library', JSON.stringify(this.state.library));
+                // Local storage persistence removed. 
+                // Library state is managed in memory and synced via Firestore.
             }
 
             initConverters() {
@@ -2678,11 +2679,11 @@ ${userText}
                 this.state.darkMode = !this.state.darkMode;
                 if (this.state.darkMode) {
                     document.documentElement.classList.add('dark');
-                    localStorage.setItem('hanzi_theme', 'dark');
+                    // localStorage.setItem('hanzi_theme', 'dark'); // REMOVED
                     this.elements.iconTheme.setAttribute('data-lucide', 'sun');
                 } else {
                     document.documentElement.classList.remove('dark');
-                    localStorage.setItem('hanzi_theme', 'light');
+                    // localStorage.setItem('hanzi_theme', 'light'); // REMOVED
                     this.elements.iconTheme.setAttribute('data-lucide', 'moon');
                 }
                 lucide.createIcons();
@@ -2875,24 +2876,15 @@ ${userText}
             }
 
             saveSettings() {
-                localStorage.setItem('hanzi_size_h', this.state.settings.hanziSize);
-                localStorage.setItem('hanzi_size_l', this.state.settings.latinSize);
-                localStorage.setItem('hanzi_font', this.state.settings.fontStyle);
-                localStorage.setItem('hanzi_pinyin_top', this.state.settings.pinyinTop);
-                localStorage.setItem('hanzi_pinyin_char', this.state.settings.pinyinPerChar);
-                localStorage.setItem('hanzi_word_color', this.state.settings.wordColor);
-                localStorage.setItem('hanzi_stroke_order', this.state.settings.strokeOrder);
-                localStorage.setItem('hanzi_show_translation', this.state.settings.showTranslation);
-                localStorage.setItem('hanzi_char_mode', this.state.settings.charMode);
-                this.saveToFirestore(true);
+                // Settings persist to Firestore if online.
+                this.saveToFirestore(true); 
             }
             
             saveGeminiSettings() {
                 this.state.settings.geminiApiKey = this.elements.inputGeminiKey.value;
                 this.state.settings.geminiVoice = this.elements.selectGeminiVoice.value;
-                localStorage.setItem('hanzi_gemini_key', this.state.settings.geminiApiKey);
-                localStorage.setItem('hanzi_gemini_voice', this.state.settings.geminiVoice);
-                this.saveToFirestore(true);
+                // No local storage
+                this.saveToFirestore(true); 
             }
             
             updateGeminiUI() {
