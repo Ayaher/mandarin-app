@@ -727,7 +727,7 @@
                                     </div>
 
                                     <!-- Vocabulary Widget (Right on Desktop, Floating on Mobile) -->
-                                    <div id="vocab-widget" class="fixed inset-0 z-50 lg:static lg:z-auto hidden lg:flex flex-col bg-white dark:bg-gray-800 lg:bg-transparent lg:dark:bg-transparent h-full max-h-[calc(100vh-200px)] lg:max-h-full overflow-hidden">
+                                    <div id="vocab-widget" class="fixed inset-0 z-50 lg:static lg:z-auto hidden lg:flex flex-col bg-white dark:bg-gray-800 lg:bg-transparent lg:dark:bg-transparent h-full lg:h-auto lg:max-h-full overflow-hidden">
                                         <!-- Mobile Header -->
                                         <div class="lg:hidden px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between bg-white dark:bg-gray-800">
                                             <h3 class="font-bold text-gray-900 dark:text-white">Core Vocabulary</h3>
@@ -737,14 +737,14 @@
                                         </div>
 
                                         <!-- Widget Content -->
-                                        <div class="flex-1 overflow-y-auto p-6 lg:p-0 lg:h-full flex flex-col gap-3">
-                                            <div class="hidden lg:flex items-center gap-2 mb-2 text-gray-900 dark:text-white">
+                                        <div class="flex-1 overflow-hidden p-6 lg:p-0 flex flex-col gap-3 h-full">
+                                            <div class="hidden lg:flex items-center gap-2 mb-2 text-gray-900 dark:text-white shrink-0">
                                                 <i data-lucide="book" class="w-4 h-4 text-pink-500"></i>
                                                 <span class="font-bold text-sm uppercase tracking-wider">Vocabulary Reference</span>
                                             </div>
                                             
-                                            <div class="bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-100 dark:border-yellow-800/30 rounded-xl p-4 flex-1 overflow-y-auto shadow-sm h-full">
-                                                <ul id="vocab-list" class="space-y-3 text-sm">
+                                            <div class="bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-100 dark:border-yellow-800/30 rounded-xl p-4 flex-1 overflow-y-auto shadow-sm min-h-0 relative overscroll-contain">
+                                                <ul id="vocab-list" class="space-y-3 text-sm pb-12 lg:pb-0">
                                                     <!-- Injected via JS -->
                                                 </ul>
                                                 <div id="vocab-empty" class="text-center text-gray-400 text-xs py-4 hidden">
