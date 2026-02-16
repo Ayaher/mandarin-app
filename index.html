@@ -3409,20 +3409,18 @@ ${userText}
                             // OPTIMIZATION: Fetch all library items in one request (1 read vs N reads)
                             // This significantly speeds up initial load
                             const librarySnapshot = await getDocs(collection(this.db, "users", uid, "library"));
+                            console.log('++++++++++++++++++++++++++');
                             const libraryMap = new Map();
                             librarySnapshot.forEach(doc => {
                                 libraryMap.set(doc.id, doc.data());
                             });
 
-                            console.log('++++++++++++++++++++++++++');
 
                             // Reconstruct library based on index order from settings
                             // This preserves the user's custom sort order
                             this.state.library = content.libraryIndex
                                 .map(idxItem => libraryMap.get(idxItem.id))
                                 .filter(Boolean);
-
-                            console.log('------------------------');
                         }
 
                         if (this.state.library.length > 0) {
