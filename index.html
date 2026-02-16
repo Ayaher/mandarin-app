@@ -1731,7 +1731,7 @@
 
                 // Load Item into Active State (Redundant if loaded above, but safe)
                 this.state.activeTextId = id;
-                if (!this.state.text) this.state.text = item.content || item.preview || ""; // Final Fallback
+                this.state.text = item.content || item.preview || ""; // Always update text content
                 this.state.quizData = item.quizData || null;
                 this.state.writingData = item.writingData || null;
                 this.state.writingResult = item.writingResult || null;
@@ -1766,6 +1766,7 @@
 
                 // Setup View Mode
                 this.elements.markdownInput.value = this.state.text;
+                this.state.currentIndex = 0; // Reset card index when opening a new text
                 this.state.isQuizActive = false;
                 this.state.isWritingActive = false;
                 
