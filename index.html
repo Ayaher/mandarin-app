@@ -1363,35 +1363,6 @@
                         this.state.library = JSON.parse(storedLib);
                     } catch(e) { console.error("Failed to parse library", e); }
                 }
-
-                // MIGRATION: If library is empty but we have legacy 'hanzi_text', migrate it.
-                // DEFAULT_TEXT removed; rely on Firestore for content if no local data exists.
-                if (this.state.library.length === 0) {
-                    const legacyText = localStorage.getItem('hanzi_text');
-                    
-                    if (legacyText) {
-                        const legacyQuiz = JSON.parse(localStorage.getItem('hanzi_quiz_data')) || null;
-                        const legacyWriting = JSON.parse(localStorage.getItem('hanzi_writing_data')) || null;
-                        const legacyWritingRes = JSON.parse(localStorage.getItem('hanzi_writing_result')) || null;
-                        
-                        // Create first library item from legacy data
-                        const newItem = {
-                            id: crypto.randomUUID(),
-                            title: "Migrated Text",
-                            content: legacyText,
-                            quizData: legacyQuiz,
-                            writingData: legacyWriting,
-                            writingResult: legacyWritingRes,
-                            contextData: {}, 
-                            lastOpened: Date.now()
-                        };
-                        
-                        this.state.library.push(newItem);
-                        this.saveLibraryToLocal(); // Persist new structure (Actually this fn is empty now, but safe to call)
-                        // Trigger Firestore sync as well? Ideally yes, but that happens elsewhere usually
-                        this.saveToFirestore(true);
-                    }
-                }
             }
 
             saveLibraryToLocal() {
@@ -3604,11 +3575,6 @@ ${userText}
                         this.updateSettingsUI();
                         this.updateGeminiUI();
                         this.parseCards();
-                        
-                        // THEN save to ensure consistency and correct timestamp?
-                        // Actually, saving immediately after loading is only needed if we migrated data.
-                        // If we loaded existing data, saving is redundant but harmless.
-                        this.saveSettings(); 
                         
                         // Update Sync Payload to match what we just loaded (including config)
                         // Note: getSyncPayload strips config, so we might need to be careful with comparison
