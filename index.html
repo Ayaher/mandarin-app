@@ -2289,22 +2289,32 @@
 
             // --- Quiz Logic ---
 
-            toggleQuiz() {
+            async toggleQuiz() {
                 // If turning ON
                 if (!this.state.isQuizActive) {
-                    // Turn off Writing if active
-                    if (this.state.isWritingActive) {
-                        this.state.isWritingActive = false;
-                        this.updateWritingButtonState();
-                    }
-
                     // Check if we already have data
                     if (!this.state.quizData) {
+                         // Ask for confirmation before using API quota
+                         const proceed = await this.showConfirm("This will generate a quiz using your Gemini API quota. Do you want to proceed?", "Generate Quiz");
+                         if (!proceed) return;
+
+                        // Turn off Writing if active
+                        if (this.state.isWritingActive) {
+                            this.state.isWritingActive = false;
+                            this.updateWritingButtonState();
+                        }
+
                          this.state.isQuizActive = true;
                          this.updateQuizButtonState();
                          this.generateQuiz();
                          this.renderCard(); // Triggers renderQuizUI via renderCard check
                          return;
+                    } else {
+                        // Turn off Writing if active (when switching to existing quiz)
+                        if (this.state.isWritingActive) {
+                            this.state.isWritingActive = false;
+                            this.updateWritingButtonState();
+                        }
                     }
                 }
 
@@ -2681,24 +2691,30 @@ Return ONLY a JSON object with this structure:
 
             // --- Writing Logic ---
 
-            toggleWriting() {
+            async toggleWriting() {
                 if (!this.state.isWritingActive) {
-                    // Turn OFF Quiz if active
-                    if (this.state.isQuizActive) {
-                        this.state.isQuizActive = false;
-                        this.updateQuizButtonState();
-                    }
-                    
-                    // Render Vocab List whenever we enter writing mode
-                    this.renderVocabList();
-
                     // Check if we have data
                     if (!this.state.writingData) {
+                         const proceed = await this.showConfirm("This will generate a writing prompt using your Gemini API quota. Do you want to proceed?", "Generate Writing Exercise");
+                         if (!proceed) return;
+
+                        // Turn OFF Quiz if active
+                        if (this.state.isQuizActive) {
+                            this.state.isQuizActive = false;
+                            this.updateQuizButtonState();
+                        }
+                        
                         this.state.isWritingActive = true;
                         this.updateWritingButtonState();
-                        this.generateWritingPrompt();
+                        this.generateWritingPrompt(); // Async call inside
                         this.renderCard(); 
                         return;
+                    } else {
+                        // Turn OFF Quiz if active (switching to existing writing)
+                        if (this.state.isQuizActive) {
+                            this.state.isQuizActive = false;
+                            this.updateQuizButtonState();
+                        }
                     }
                 }
 
