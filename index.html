@@ -1691,7 +1691,11 @@
                             if (fullData.writingResult) this.state.writingResult = fullData.writingResult;
                             if (fullData.contextData) this.state.contextData = fullData.contextData;
                             if (fullData.userAnswers) this.state.userAnswers = fullData.userAnswers;
-                            
+                            if (fullData.writingDraft) item.writingDraft = fullData.writingDraft;
+                            if (fullData.labels) item.labels = fullData.labels;
+                            if (fullData.title) item.title = fullData.title; // Sync title just in case
+                            if (fullData.isDone !== undefined) item.isDone = fullData.isDone;
+
                         } else {
                             this.showToast("Text not found on server", "alert-circle");
                         }
