@@ -3399,34 +3399,10 @@ ${userText}
                     if (docSnap.exists()) {
                         console.log("Loading consolidated settings found.");
                         content = docSnap.data();
-                    } else {
-                        console.log("No consolidated settings found. Attempting migration.");
-                        // Fallback/Migration: Check old locations if new doc doesn't exist
-                        console.log("Migrating from old structure...");
-                        
-                        // 1. Load Old App Data
-                        const oldDataSnap = await getDoc(doc(this.db, "users", uid, "data", "app_data"));
-                        if (oldDataSnap.exists()) {
-                            content = oldDataSnap.data();
-                        }
-
-                        // 2. Load Old Config
-                        const oldConfigSnap = await getDoc(doc(this.db, "users", uid, "settings", "config"));
-                        if (oldConfigSnap.exists()) {
-                            const oldConfig = oldConfigSnap.data();
-                            if (!content) content = { settings: {} };
-                            if (!content.settings) content.settings = {};
-                            
-                            if (oldConfig.gemini_api_key) content.settings.geminiApiKey = oldConfig.gemini_api_key;
-                            if (oldConfig.gemini_voice) content.settings.geminiVoice = oldConfig.gemini_voice;
-                        }
                     }
 
                     if (content) {
-                        if (content.library) {
-                            // Legacy: Full library embedded
-                            this.state.library = content.library;
-                        } else if (content.libraryIndex) {
+                        if (content.libraryIndex) {
                             // New: Load individual library documents
                             console.log(`Loading ${content.libraryIndex.length} library items from separate docs...`);
                             
