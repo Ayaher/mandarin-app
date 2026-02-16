@@ -145,7 +145,7 @@
             </button>
 
             <!-- Sync Status (Visible only if Token set) -->
-            <div id="btn-sync-status" class="hidden relative group mr-1 cursor-pointer" onclick="app.handlers.forceSync()">
+            <div id="btn-sync-status" class="hidden relative group mr-1 cursor-default">
                 <div class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                     <i id="icon-sync" data-lucide="cloud" class="w-5 h-5 text-gray-500 dark:text-gray-400"></i>
                     <!-- Status Indicator Dot -->
@@ -253,12 +253,6 @@
                         <p class="text-xs text-gray-500">Sign in to sync your progress.</p>
                         <button onclick="document.getElementById('setup-screen').classList.remove('hidden')" class="w-full py-2 px-3 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-all flex items-center justify-center gap-2">
                             <i data-lucide="log-in" class="w-4 h-4"></i> Sign In
-                        </button>
-                    </div>
-                    
-                    <div class="flex gap-2 mt-2">
-                         <button id="btn-force-sync" onclick="app.handlers.forceSync()" class="flex-1 py-2 px-3 rounded-lg text-sm font-medium bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 active:scale-95 shadow-sm transition-all flex items-center justify-center gap-2">
-                            <i data-lucide="refresh-cw" class="w-4 h-4"></i> Force Sync
                         </button>
                     </div>
                 </div>
@@ -961,7 +955,6 @@
                             this.setMode('library');
                         } catch (e) { console.error(e); }
                     },
-                    forceSync: () => this.saveToFirestore(),
                     markAsDone: async () => {
                         const id = this.state.activeTextId;
                         if (!id) return;
@@ -1461,7 +1454,7 @@
                         // Debounced Save for Draft
                         if (this.saveDraftDebounceTimer) clearTimeout(this.saveDraftDebounceTimer);
                         this.saveDraftDebounceTimer = setTimeout(() => {
-                            this.saveToFirestore();
+                            this.saveToFirestore(true);
                         }, 1000);
                     });
                 }
@@ -2308,6 +2301,7 @@ Return ONLY a JSON object with this structure:
                     this.updateSyncUI(); // Update UI to show unsaved changes
                     
                     this.renderQuizUI();
+                    this.saveToFirestore(true);
 
                 } catch (error) {
                     console.error(error);
@@ -2378,6 +2372,12 @@ Return ONLY a JSON object with this structure:
             handleQuizOption(qIdx, oIdx) {
                 this.state.userAnswers[qIdx] = oIdx;
                 this.renderQuizUI();
+                
+                // Debounced Save
+                if (this.saveQuizDebounceTimer) clearTimeout(this.saveQuizDebounceTimer);
+                this.saveQuizDebounceTimer = setTimeout(() => {
+                    this.saveToFirestore(true);
+                }, 1000);
             }
 
             renderQuizResults(data, answers) {
@@ -2455,6 +2455,7 @@ Return ONLY a JSON object with this structure:
             retakeQuiz() {
                this.state.userAnswers = {};
                this.renderQuizUI();
+               this.saveToFirestore(true);
             }
 
             // --- Vocabulary Widget Logic ---
@@ -2707,6 +2708,7 @@ ${fullText}
                     
                     this.updateSyncUI(); // Update UI to show unsaved changes
                     this.renderWritingUI();
+                    this.saveToFirestore(true);
                 } catch (e) {
                     console.error(e);
                     await this.showAlert("Failed to generate writing prompt. Please try again.", "Error");
@@ -2792,6 +2794,7 @@ ${userText}
                     
                     this.updateSyncUI(); // Update UI to show unsaved changes
                     this.renderWritingUI();
+                    this.saveToFirestore(true);
 
                 } catch (e) {
                     console.error(e);
@@ -2884,6 +2887,7 @@ ${userText}
                  this.state.writingResult = null;
                  this.updateSyncUI(); // Update UI to show unsaved changes
                  this.renderWritingUI();
+                 this.saveToFirestore(true);
             }
 
             newWriting() {
