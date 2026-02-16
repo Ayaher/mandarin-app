@@ -2237,6 +2237,9 @@
                     
                     // Render for current level
                     this.renderContextList(parsed);
+                    
+                    // Persist to user's database
+                    this.saveToFirestore(true);
 
                 } catch (error) {
                     console.error(error);
