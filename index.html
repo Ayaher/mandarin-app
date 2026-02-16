@@ -3277,6 +3277,8 @@ ${userText}
                         if (obj.libraryIndex) {
                             obj.libraryIndex.forEach(item => {
                                 delete item.lastOpened;
+                                delete item.isLoaded; // Don't track runtime loading state as change
+                                // delete item.preview; // Preview change should ideally track content change, but ignoring for now to solve false positives on open
                             });
                         }
                         return JSON.stringify(obj);
