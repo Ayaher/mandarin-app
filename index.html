@@ -3286,6 +3286,12 @@ ${userText}
                                 delete item.isLoaded; // Don't track runtime loading state as change
                                 delete item.preview; // Preview change might trigger valid updates but often causes noise. 
                                 delete item.sentenceCount; // Ignore sentence count changes for unsaved check
+                                delete item.userAnswers; // Ignore loaded user data (kept in specialized doc)
+                                delete item.writingDraft; // Ignore draft (kept in specialized doc)
+                                delete item.quizData; // Ignore quiz data (kept in specialized doc)
+                                delete item.writingData; // Ignore writing data (kept in specialized doc)
+                                delete item.writingResult; 
+                                delete item.contextData;
                             });
                         }
                         return JSON.stringify(obj);
