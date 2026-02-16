@@ -458,6 +458,13 @@
                     <div class="flex gap-1 items-center bg-gray-100 dark:bg-gray-800 p-1 rounded-xl hidden md:flex" id="library-filter-labels">
                         <!-- Injected via JS -->
                     </div>
+                    <div class="relative">
+                        <select id="select-library-sort" class="pl-3 pr-8 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 appearance-none cursor-pointer w-full md:w-auto transition-shadow text-gray-700 dark:text-gray-300">
+                            <option value="created">Date Created</option>
+                            <option value="accessed">Last Accessed</option>
+                        </select>
+                        <i data-lucide="chevron-down" class="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+                    </div>
                     <label class="flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors select-none">
                         <input type="checkbox" id="checkbox-library-not-done" class="rounded text-blue-600 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600">
                         <span class="text-sm text-gray-700 dark:text-gray-300">Not Done</span>
@@ -1007,6 +1014,7 @@
                     librarySearch: '',
                     libraryFilterNotDone: false,
                     libraryFilterLabels: [],
+                    librarySort: 'created',
                     
                     // Active Text Session Buffers (Loaded from Library)
                     text: "", 
@@ -1070,6 +1078,7 @@
                     inputLibrarySearch: document.getElementById('input-library-search'),
                     checkboxLibraryNotDone: document.getElementById('checkbox-library-not-done'),
                     libraryFilterLabels: document.getElementById('library-filter-labels'),
+                    selectLibrarySort: document.getElementById('select-library-sort'),
                     
                     // Create Text Elements
                     dialogCreateText: document.getElementById('dialog-create-text'),
@@ -1430,6 +1439,13 @@
                     });
                 }
 
+                if (this.elements.selectLibrarySort) {
+                    this.elements.selectLibrarySort.addEventListener('change', (e) => {
+                        this.state.librarySort = e.target.value;
+                        this.renderLibrary();
+                    });
+                }
+
                 // Markdown Input
                 if (this.elements.markdownInput) {
                     this.elements.markdownInput.value = this.state.text;
@@ -1610,11 +1626,14 @@
                     empty.classList.add('hidden');
                 }
 
-                // Sort by Created At (desc), fallback to lastOpened
+                // Sort Logic
                 const sorted = [...filtered].sort((a, b) => {
-                    const timeA = a.createdAt || a.lastOpened || 0;
-                    const timeB = b.createdAt || b.lastOpened || 0;
-                    return timeB - timeA;
+                    if (this.state.librarySort === 'accessed') {
+                        return (b.lastOpened || 0) - (a.lastOpened || 0);
+                    } else {
+                        // Default: Created Date
+                        return (b.createdAt || 0) - (a.createdAt || 0);
+                    }
                 });
 
                 sorted.forEach(item => {
@@ -3241,6 +3260,10 @@ ${userText}
                     if (content) {
                         indexItem.preview = content.substring(0, 100).replace(/[*#]/g, '');
                     }
+                    // Ensure sorting fields are present
+                    indexItem.createdAt = item.createdAt;
+                    indexItem.lastOpened = item.lastOpened;
+                    
                     return indexItem;
                 });
 
@@ -3362,6 +3385,8 @@ ${userText}
                             title: data.title || "Untitled",
                             isDone: data.isDone || false,
                             updatedAt: data.updatedAt || new Date().toISOString(),
+                            createdAt: data.createdAt,
+                            lastOpened: data.lastOpened,
                             preview: data.preview || (data.content ? data.content.substring(0, 100).replace(/[*#]/g, '') : ""),
                             labels: data.labels || []
                         });
@@ -3370,6 +3395,8 @@ ${userText}
                         fullLibrary.push({ 
                             id: doc.id, 
                             ...data, 
+                            createdAt: data.createdAt,
+                            lastOpened: data.lastOpened,
                             isLoaded: !!data.content, // Loaded if content exists
                             preview: data.preview || (data.content ? data.content.substring(0, 100).replace(/[*#]/g, '') : ""),
                             labels: data.labels || []
