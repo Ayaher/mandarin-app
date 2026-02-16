@@ -910,7 +910,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, doc, getDoc, setDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         const firebaseConfig = {
@@ -1656,25 +1656,65 @@
                 lucide.createIcons();
             }
 
-            openText(id) {
+            async openText(id) {
                 // Determine source item
                 const item = this.state.library.find(i => i.id === id);
                 if (!item) return;
 
                 // Save current Active text back to library if we were switching from another text?
-                // Ideally we autosave constantly, so the library state should be fresh.
-                // But let's make sure we flush current usage.
                 if (this.state.activeTextId && this.state.activeTextId !== id) {
                     this.saveActiveTextToLibrary();
                 }
 
-                // Load Item into Active State
+                // Check if full content is loaded
+                if (item.isLoaded === false) {
+                    console.log(`Lazy loading full content for ${id}...`);
+                    this.showToast("Loading text...", "loader-2"); // Show loading
+                    
+                    try {
+                        const docRef = doc(this.db, "users", this.state.user.uid, "library", id);
+                        const docSnap = await getDoc(docRef);
+                        
+                        if (docSnap.exists()) {
+                            const fullData = docSnap.data();
+                            console.log("Lazy loaded content length:", fullData.content?.length);
+                            Object.assign(item, fullData);
+                            item.isLoaded = true;
+                            
+                            // Rehydrate internal state immediately
+                            if (fullData.content) {
+                                item.content = fullData.content;
+                                this.state.text = item.content;
+                            }
+                            if (fullData.quizData) this.state.quizData = fullData.quizData;
+                            if (fullData.writingData) this.state.writingData = fullData.writingData;
+                            if (fullData.writingResult) this.state.writingResult = fullData.writingResult;
+                            if (fullData.contextData) this.state.contextData = fullData.contextData;
+                            if (fullData.userAnswers) this.state.userAnswers = fullData.userAnswers;
+                            
+                        } else {
+                            this.showToast("Text not found on server", "alert-circle");
+                        }
+                    } catch (e) {
+                        console.error("Error lazy loading text:", e);
+                        this.showToast("Failed to load text", "wifi-off");
+                        // Fallback to offline content if available (e.g. preview)
+                        this.state.text = item.content || item.preview || "";
+                    }
+                }
+
+                // Load Item into Active State (Redundant if loaded above, but safe)
                 this.state.activeTextId = id;
-                this.state.text = item.content;
+                if (!this.state.text) this.state.text = item.content || item.preview || ""; // Final Fallback
                 this.state.quizData = item.quizData || null;
                 this.state.writingData = item.writingData || null;
                 this.state.writingResult = item.writingResult || null;
                 this.state.contextData = item.contextData || {};
+                
+                // Update local 'writingDraft' if present?
+                if (item.writingDraft) {
+                    // Logic to restore draft handled later/UI specific
+                }
 
                 // Set Title
                 if (this.elements.studyTitle) {
@@ -1757,13 +1797,24 @@
                         this.state.activeTextId = null;
                         this.setMode('library');
                     }
-                    this.saveToFirestore(true); // Sync delete
+                    this.saveToFirestore(true); // Sync index
+                    
+                    // Also delete the individual document
+                    if (this.state.user) {
+                        try {
+                            await deleteDoc(doc(this.db, "users", this.state.user.uid, "library", id));
+                            this.showToast("Text deleted permanently", "trash-2");
+                        } catch (e) {
+                            console.error("Error deleting document:", e);
+                            this.showToast("Error deleting from server", "alert-triangle");
+                        }
+                    }
                 }
             }
 
             // --- Create Text Logic ---
             
-            showCreateTextDialog(editId = null) {
+            async showCreateTextDialog(editId = null) {
                 this.state.editingId = editId;
                 const mode = editId ? 'manual' : 'manual';
                 this.setCreateMode(mode);
@@ -1771,8 +1822,27 @@
                 if (editId) {
                     const item = this.state.library.find(i => i.id === editId);
                     if (item) {
+                       // Ensure full content is loaded before editing
+                       if (item.isLoaded === false) {
+                           this.showToast("Loading full text for editing...", "loader-2");
+                           try {
+                               const docRef = doc(this.db, "users", this.state.user.uid, "library", editId);
+                               const docSnap = await getDoc(docRef);
+                               if (docSnap.exists()) {
+                                   const fullData = docSnap.data();
+                                   Object.assign(item, fullData);
+                                   item.isLoaded = true;
+                                   if (fullData.content) item.content = fullData.content;
+                               }
+                           } catch (e) {
+                               console.error("Failed to load for edit", e);
+                               this.showToast("Failed to load text. Editing disabled.", "alert-triangle");
+                               return;
+                           }
+                       }
+
                        this.elements.inputCreateTitle.value = item.title;
-                       this.elements.inputCreateContent.value = item.content;
+                       this.elements.inputCreateContent.value = item.content || "";
                        this.elements.labelCreateSubmit.textContent = "Update Text";
                        
                        this.state.tempLabels = new Set(item.labels || []);
@@ -1933,6 +2003,7 @@
                         this.state.library[index].content = content;
                         this.state.library[index].lastOpened = Date.now(); // Update timestamp
                         this.state.library[index].labels = labels; // Save labels
+                        this.state.library[index].isLoaded = true; // Mark as loaded since we have full content now (from edit)
                         
                         // If it's the active text, refresh active state without switching view
                         if (this.state.activeTextId === this.state.editingId) {
@@ -1967,7 +2038,8 @@
                     writingDraft: "",
                     contextData: {},
                     writingResult: null,
-                    isDone: false
+                    isDone: false,
+                    isLoaded: true // Newly created items are fully available
                 };
                 
                 this.state.library.unshift(newItem); 
@@ -3155,6 +3227,10 @@ ${userText}
                 // STRIP heavy content: content, quizData, writingData, writingResult, contextData
                 const libraryIndex = currentLibrary.map(item => {
                     const { content, quizData, writingData, writingResult, contextData, writingDraft, ...indexItem } = item;
+                    // Add preview (first 100 chars) for listing
+                    if (content) {
+                        indexItem.preview = content.substring(0, 100).replace(/[*#]/g, '');
+                    }
                     return indexItem;
                 });
 
@@ -3273,10 +3349,19 @@ ${userText}
                             id: doc.id,
                             title: data.title || "Untitled",
                             isDone: data.isDone || false,
-                            updatedAt: data.updatedAt || new Date().toISOString()
+                            updatedAt: data.updatedAt || new Date().toISOString(),
+                            preview: data.preview || (data.content ? data.content.substring(0, 100).replace(/[*#]/g, '') : ""),
+                            labels: data.labels || []
                         });
                         // Construct full library object for local state update
-                        fullLibrary.push({ id: doc.id, ...data });
+                        // Ensure we don't accidentally mark it as unloaded if we have full data here
+                        fullLibrary.push({ 
+                            id: doc.id, 
+                            ...data, 
+                            isLoaded: !!data.content, // Loaded if content exists
+                            preview: data.preview || (data.content ? data.content.substring(0, 100).replace(/[*#]/g, '') : ""),
+                            labels: data.labels || []
+                        });
                     });
 
                     // Sort by updatedAt descending
@@ -3356,7 +3441,18 @@ ${userText}
                         
                         // Save to separate collection
                         // users/{uid}/library/{item.id}
-                        await setDoc(doc(this.db, "users", uid, "library", item.id), docData, { merge: true });
+                        // SAFEGUARD: Only save if the item is loaded or is the active text
+                        // We don't want to overwrite a full server document with a partial local state
+                        if (item.isLoaded || this.state.activeTextId === item.id) {
+                            // Clone to avoid mutating state item
+                            const payload = { ...docData }; 
+                            
+                            // Remove internal flags before saving
+                            delete payload.isLoaded; 
+                            delete payload.preview; 
+                            
+                            await setDoc(doc(this.db, "users", uid, "library", item.id), payload, { merge: true });
+                        }
                     });
                     
                     await Promise.all(tasks);
@@ -3403,24 +3499,16 @@ ${userText}
 
                     if (content) {
                         if (content.libraryIndex) {
-                            // New: Load individual library documents
-                            console.log(`Loading ${content.libraryIndex.length} library items from separate docs...`);
+                            // New: Load library index only (Lightweight)
+                            console.log(`Loading ${content.libraryIndex.length} library index items...`);
                             
-                            // OPTIMIZATION: Fetch all library items in one request (1 read vs N reads)
-                            // This significantly speeds up initial load
-                            const librarySnapshot = await getDocs(collection(this.db, "users", uid, "library"));
-                            console.log('++++++++++++++++++++++++++');
-                            const libraryMap = new Map();
-                            librarySnapshot.forEach(doc => {
-                                libraryMap.set(doc.id, doc.data());
-                            });
-
-
-                            // Reconstruct library based on index order from settings
-                            // This preserves the user's custom sort order
-                            this.state.library = content.libraryIndex
-                                .map(idxItem => libraryMap.get(idxItem.id))
-                                .filter(Boolean);
+                            // Transform Index to Library State
+                            // We mark items as 'partial' so we know to fetch full content on open
+                            this.state.library = content.libraryIndex.map(idxItem => ({
+                                ...idxItem,
+                                content: idxItem.preview || "", // Use preview as temporary content
+                                isLoaded: false // Flag to indicate full content not loaded
+                            }));
                         }
 
                         if (this.state.library.length > 0) {
