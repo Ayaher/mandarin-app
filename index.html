@@ -1659,7 +1659,12 @@
                             <p class="text-sm text-gray-500 dark:text-gray-400 line-clamp-3 leading-relaxed">${preview}</p>
                         </div>
                         <div class="px-6 py-4 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-100 dark:border-gray-800 flex justify-between items-center text-xs text-gray-400">
-                            <span>Created at: ${date}</span>
+                            <div class="flex items-center gap-3">
+                                <span>${date}</span>
+                                <span class="flex items-center gap-1" title="Sentence Cards">
+                                    <i data-lucide="layers" class="w-3 h-3"></i> ${item.sentenceCount || 0}
+                                </span>
+                            </div>
                             <div class="flex items-center gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button class="p-2 rounded-lg hover:bg-blue-100 hover:text-blue-600 dark:hover:bg-blue-900/30 dark:hover:text-blue-400 transition-colors" onclick="app.showCreateTextDialog('${item.id}')" title="Edit Text">
                                     <i data-lucide="edit-2" class="w-4 h-4"></i>
@@ -1799,9 +1804,11 @@
                     userAnswers: this.state.userAnswers, // Save Quiz Progress
                     writingData: this.state.writingData,
                     writingResult: this.state.writingResult,
-                    writingDraft: this.elements.writingInput.value, // Save Writing Draft
+                    writingDraft: this.elements.writingInput ? this.elements.writingInput.value : this.state.library[index].writingDraft, // Save Writing Draft
                     contextData: this.state.contextData,
-                    lastOpened: Date.now()
+                    lastOpened: Date.now(),
+                    // Recalculate sentence count in case content changed in view mode (unlikely but safe)
+                    sentenceCount: (this.state.text && this.state.text.trim()) ? this.state.text.split('---').map(b => b.trim()).filter(b => b.length > 0).length : 0
                 };
                 
                 this.saveLibraryToLocal();
@@ -2025,7 +2032,8 @@
                         this.state.library[index].lastOpened = Date.now(); // Update timestamp
                         this.state.library[index].labels = labels; // Save labels
                         this.state.library[index].isLoaded = true; // Mark as loaded since we have full content now (from edit)
-                        
+                        this.state.library[index].sentenceCount = (content && content.trim()) ? content.split('---').map(b => b.trim()).filter(b => b.length > 0).length : 0;
+
                         // If it's the active text, refresh active state without switching view
                         if (this.state.activeTextId === this.state.editingId) {
                             this.state.text = content;
@@ -2060,13 +2068,16 @@
                     contextData: {},
                     writingResult: null,
                     isDone: false,
-                    isLoaded: true // Newly created items are fully available
+                    isLoaded: true, // Newly created items are fully available
+                    sentenceCount: (content && content.trim()) ? content.split('---').map(b => b.trim()).filter(b => b.length > 0).length : 0
                 };
                 
+                // Ensure render happens after state update
                 this.state.library.unshift(newItem); 
                 this.saveLibraryToLocal();
                 this.hideCreateTextDialog();
                 this.openText(newItem.id);
+                setTimeout(() => this.renderLibrary(), 100); 
                 this.saveToFirestore(true); 
             }
 
@@ -3259,6 +3270,8 @@ ${userText}
                     // Add preview (first 100 chars) for listing
                     if (content) {
                         indexItem.preview = content.substring(0, 100).replace(/[*#]/g, '');
+                        // Count sentences (blocks separated by ---)
+                        indexItem.sentenceCount = content.split('---').map(b => b.trim()).filter(b => b.length > 0).length;
                     }
                     // Ensure sorting fields are present
                     indexItem.createdAt = item.createdAt;
@@ -3379,6 +3392,9 @@ ${userText}
 
                     querySnapshot.forEach((doc) => {
                         const data = doc.data();
+                        const content = data.content || "";
+                        const sentenceCount = content.split('---').map(b => b.trim()).filter(b => b.length > 0).length;
+
                         // Construct index entry
                         newLibraryIndex.push({
                             id: doc.id,
@@ -3387,8 +3403,9 @@ ${userText}
                             updatedAt: data.updatedAt || new Date().toISOString(),
                             createdAt: data.createdAt,
                             lastOpened: data.lastOpened,
-                            preview: data.preview || (data.content ? data.content.substring(0, 100).replace(/[*#]/g, '') : ""),
-                            labels: data.labels || []
+                            preview: data.preview || (content.substring(0, 100).replace(/[*#]/g, '')),
+                            labels: data.labels || [],
+                            sentenceCount: sentenceCount
                         });
                         // Construct full library object for local state update
                         // Ensure we don't accidentally mark it as unloaded if we have full data here
@@ -3398,8 +3415,9 @@ ${userText}
                             createdAt: data.createdAt,
                             lastOpened: data.lastOpened,
                             isLoaded: !!data.content, // Loaded if content exists
-                            preview: data.preview || (data.content ? data.content.substring(0, 100).replace(/[*#]/g, '') : ""),
-                            labels: data.labels || []
+                            preview: data.preview || (content.substring(0, 100).replace(/[*#]/g, '')),
+                            labels: data.labels || [],
+                            sentenceCount: sentenceCount
                         });
                     });
 
