@@ -3442,6 +3442,9 @@ ${userText}
                     // 3. Update local state
                     this.state.library = fullLibrary;
                     this.renderLibrary();
+                    // Update snapshot to prevent "unsaved changes" warning after explicit action
+                    this.state.lastSavedSnapshot = JSON.stringify(this.getSyncPayload());
+                    
                     this.showToast("Library Index Regenerated", "check");
 
                 } catch (error) {
