@@ -1668,7 +1668,6 @@
 
                 // Check if full content is loaded
                 if (item.isLoaded === false) {
-                    console.log(`Lazy loading full content for ${id}...`);
                     this.showToast("Loading text...", "loader-2"); // Show loading
                     
                     try {
@@ -1677,7 +1676,6 @@
                         
                         if (docSnap.exists()) {
                             const fullData = docSnap.data();
-                            console.log("Lazy loaded content length:", fullData.content?.length);
                             Object.assign(item, fullData);
                             item.isLoaded = true;
                             
@@ -3507,15 +3505,12 @@ ${userText}
                     let content = null;
 
                     if (docSnap.exists()) {
-                        console.log("Loading consolidated settings found.");
                         content = docSnap.data();
                     }
 
                     if (content) {
                         if (content.libraryIndex) {
                             // New: Load library index only (Lightweight)
-                            console.log(`Loading ${content.libraryIndex.length} library index items...`);
-                            
                             // Transform Index to Library State
                             // We mark items as 'partial' so we know to fetch full content on open
                             this.state.library = content.libraryIndex.map(idxItem => ({
@@ -3547,7 +3542,6 @@ ${userText}
                         
                         if (content.settings) {
                              // Merge settings
-                             console.log("Found settings in DB (merging):", content.settings);
                              this.state.settings = { ...this.state.settings, ...content.settings };
                         } else {
                             console.log("No 'settings' field in content object. Using defaults or migration data.");
