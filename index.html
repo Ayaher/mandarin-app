@@ -1806,12 +1806,7 @@
                 }
 
                 if (filtered.length === 0) {
-                    // Show "No results" potentially?
-                    // For now, let's just show empty or a custom "No match" message?
-                    // Or keep the empty state but maybe change text?
-                    // Let's create a temporary "empty search" element on the fly or just use empty list logic.
-                    // But libraryEmpty says "Create your first study text".
-                    // Let's just leave list empty for now.
+                    empty.classList.add('hidden');
                 } else {
                     empty.classList.add('hidden');
                 }
@@ -1845,6 +1840,34 @@
 
                     const doneBadge = item.isDone ? `<div class="absolute top-4 right-4 text-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 p-1 rounded-full"><i data-lucide="check" class="w-4 h-4"></i></div>` : '';
 
+                    // Quiz Stats
+                    let quizIconColor = 'text-gray-300 dark:text-gray-600';
+                    let quizText = '';
+                    if (item.quizScore !== undefined) {
+                        const score = item.quizScore;
+                        quizText = `<span class="text-[10px] font-bold ml-0.5">${score}%</span>`;
+                        if (score >= 80) quizIconColor = 'text-green-500 dark:text-green-400';
+                        else if (score >= 50) quizIconColor = 'text-yellow-500 dark:text-yellow-400';
+                        else quizIconColor = 'text-red-500 dark:text-red-400';
+                    } else if (item.hasQuiz) {
+                         // Has quiz but no score yet (maybe resets?) or legacy
+                         quizIconColor = 'text-gray-400 dark:text-gray-500';
+                    }
+
+                    // Writing Stats
+                    let writingIconColor = 'text-gray-300 dark:text-gray-600';
+                    let writingText = '';
+                    if (item.writingScore !== undefined) {
+                        const score = item.writingScore;
+                        writingText = `<span class="text-[10px] font-bold ml-0.5">${score}%</span>`;
+                        if (score >= 80) writingIconColor = 'text-green-500 dark:text-green-400';
+                         else if (score >= 50) writingIconColor = 'text-yellow-500 dark:text-yellow-400';
+                        else writingIconColor = 'text-red-500 dark:text-red-400';
+                    } else if (item.hasWriting) {
+                         writingIconColor = 'text-gray-400 dark:text-gray-500';
+                    }
+
+
                     card.innerHTML = `
                          ${doneBadge}
                          <div class="p-6 flex-1 cursor-pointer hover:bg-gray-50/50 dark:hover:bg-gray-700/50 transition-colors" onclick="app.openText('${item.id}')">
@@ -1857,6 +1880,16 @@
                                 <span>${date}</span>
                                 <span class="flex items-center gap-1" title="Sentence Cards">
                                     <i data-lucide="layers" class="w-3 h-3"></i> ${item.sentenceCount || 0}
+                                </span>
+                                 <!-- Quiz Status -->
+                                <span class="flex items-center gap-0.5 ${quizIconColor}" title="Quiz Result">
+                                    <i data-lucide="message-circle-question" class="w-3 h-3"></i>
+                                    ${quizText}
+                                </span>
+                                <!-- Writing Status -->
+                                <span class="flex items-center gap-0.5 ${writingIconColor}" title="Writing Result">
+                                    <i data-lucide="pen-tool" class="w-3 h-3"></i>
+                                    ${writingText}
                                 </span>
                             </div>
                             <div class="flex items-center gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
@@ -3485,14 +3518,53 @@ ${userText}
 
                     // Only update preview/count if the item is fully loaded
                     // Otherwise preserve existing values (which came from index load) to avoid corruption
-                    if (item.isLoaded && content) {
-                        indexItem.preview = content.substring(0, 100).replace(/[*#]/g, '');
-                        // Count sentences (blocks separated by ---)
-                        indexItem.sentenceCount = content.split('---').map(b => b.trim()).filter(b => b.length > 0).length;
+                    if (item.isLoaded) {
+                         if (content) {
+                            indexItem.preview = content.substring(0, 100).replace(/[*#]/g, '');
+                            // Count sentences (blocks separated by ---)
+                            indexItem.sentenceCount = content.split('---').map(b => b.trim()).filter(b => b.length > 0).length;
+                         }
+
+                         // Calculate Quiz Stats (if loaded)
+                         if (quizData && quizData.questions && Array.isArray(quizData.questions) && quizData.questions.length > 0) {
+                            indexItem.hasQuiz = true;
+                            if (item.userAnswers) {
+                                let score = 0;
+                                const questions = quizData.questions;
+                                questions.forEach((q, idx) => {
+                                    if (item.userAnswers[idx] === q.correctIndex) score++;
+                                });
+                                indexItem.quizScore = Math.round((score / questions.length) * 100);
+                            } else {
+                                delete indexItem.quizScore; // Reset if no answers
+                            }
+                         } else {
+                             indexItem.hasQuiz = false;
+                             delete indexItem.quizScore;
+                         }
+
+                         // Calculate Writing Stats (if loaded)
+                         if (writingData) {
+                             indexItem.hasWriting = true;
+                             if (writingResult && writingResult.grade !== undefined) {
+                                 indexItem.writingScore = writingResult.grade;
+                             } else {
+                                 delete indexItem.writingScore;
+                             }
+                         } else {
+                             indexItem.hasWriting = false;
+                             delete indexItem.writingScore;
+                         }
+
                     } else {
                         // Keep existing values or defaults if missing
                         indexItem.preview = item.preview || "";
                         indexItem.sentenceCount = item.sentenceCount || 0;
+                        // Preserve stats from index if not loaded
+                        indexItem.hasQuiz = item.hasQuiz || false;
+                        if (item.quizScore !== undefined) indexItem.quizScore = item.quizScore;
+                        indexItem.hasWriting = item.hasWriting || false;
+                        if (item.writingScore !== undefined) indexItem.writingScore = item.writingScore;
                     }
 
                     // Ensure sorting fields are present
@@ -3625,7 +3697,7 @@ ${userText}
                         const sentenceCount = content.split('---').map(b => b.trim()).filter(b => b.length > 0).length;
 
                         // Construct index entry
-                        newLibraryIndex.push({
+                        const indexItem = {
                             id: doc.id,
                             title: data.title || "Untitled",
                             isDone: data.isDone || false,
@@ -3635,7 +3707,33 @@ ${userText}
                             preview: data.preview || (content.substring(0, 100).replace(/[*#]/g, '')),
                             labels: data.labels || [],
                             sentenceCount: sentenceCount
-                        });
+                        };
+
+                        // Calculate Stats for Index
+                        if (data.quizData && data.quizData.questions && Array.isArray(data.quizData.questions) && data.quizData.questions.length > 0) {
+                            indexItem.hasQuiz = true;
+                            if (data.userAnswers) {
+                                let score = 0;
+                                const questions = data.quizData.questions;
+                                questions.forEach((q, idx) => {
+                                    if (data.userAnswers[idx] === q.correctIndex) score++;
+                                });
+                                indexItem.quizScore = Math.round((score / questions.length) * 100);
+                            }
+                        } else {
+                            indexItem.hasQuiz = false;
+                        }
+
+                        if (data.writingData) {
+                            indexItem.hasWriting = true;
+                            if (data.writingResult && data.writingResult.grade !== undefined) {
+                                indexItem.writingScore = data.writingResult.grade;
+                            }
+                        } else {
+                             indexItem.hasWriting = false;
+                        }
+
+                        newLibraryIndex.push(indexItem);
                         // Construct full library object for local state update
                         // Ensure we don't accidentally mark it as unloaded if we have full data here
                         fullLibrary.push({
