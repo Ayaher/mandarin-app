@@ -1961,6 +1961,7 @@
                 // Setup View Mode
                 this.elements.markdownInput.value = this.state.text;
                 this.state.currentIndex = 0; // Reset card index when opening a new text
+                window.scrollTo(0, 0); // Reset window scroll position (fixes shared scroll issue)
                 this.state.isQuizActive = false;
                 this.state.isWritingActive = false;
 
@@ -3341,6 +3342,9 @@ ${userText}
                 }
 
                 this.state.mode = mode;
+                if (mode === 'library') {
+                    window.scrollTo(0, 0);
+                }
                 this.updateModeUI();
 
                 if (mode === 'view') {
