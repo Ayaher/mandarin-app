@@ -3532,8 +3532,8 @@ ${userText}
                             userAnswers: this.state.userAnswers,
                             writingDraft: currentDraft,
                             
-                            title: this.state.title, // Keep title in sync too
-                            lastOpened: new Date().toISOString() // Update last opened to now
+                            // title: this.state.title, // Removed to prevent overwriting with undefined
+                            lastOpened: Date.now() // Update last opened to now
                         };
                     }
                 }
