@@ -3876,7 +3876,7 @@ ${userText}
                     // Consolidating everything into one document in the 'settings' subcollection
                     // Using 'data' as the document ID since 'settings' is the subcollection
                     await setDoc(doc(this.db, "users", uid, "settings", "data"), {
-                        ...payload,
+                        ...JSON.parse(snapshot),
                         updatedAt: new Date().toISOString()
                     });
 
