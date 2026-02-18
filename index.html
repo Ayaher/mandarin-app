@@ -2046,14 +2046,37 @@
                 const index = this.state.library.findIndex(i => i.id === this.state.activeTextId);
                 if (index === -1) return;
 
+                const hasQuiz = (this.state.quizData && this.state.quizData.questions && Array.isArray(this.state.quizData.questions) && this.state.quizData.questions.length > 0);
+                const hasWriting = !!(this.state.writingData);
+
+                // Calculate Scores for immediate UI update
+                let quizScore = undefined;
+                if (hasQuiz && this.state.userAnswers && Object.keys(this.state.userAnswers).length > 0) {
+                    let score = 0;
+                    const questions = this.state.quizData.questions;
+                    questions.forEach((q, idx) => {
+                        if (this.state.userAnswers[idx] === q.correctIndex) score++;
+                    });
+                    quizScore = Math.round((score / questions.length) * 100);
+                }
+
+                let writingScore = undefined;
+                if (hasWriting && this.state.writingResult && this.state.writingResult.grade !== undefined) {
+                    writingScore = this.state.writingResult.grade;
+                }
+
                 // Update content in library
                 this.state.library[index] = {
                     ...this.state.library[index],
                     content: this.state.text,
                     quizData: this.state.quizData,
+                    hasQuiz: hasQuiz,
+                    quizScore: quizScore,
                     userAnswers: this.state.userAnswers, // Save Quiz Progress
                     writingData: this.state.writingData,
+                    hasWriting: hasWriting,
                     writingResult: this.state.writingResult,
+                    writingScore: writingScore,
                     writingDraft: this.elements.writingInput ? this.elements.writingInput.value : this.state.library[index].writingDraft, // Save Writing Draft
                     contextData: this.state.contextData,
                     lastOpened: Date.now(),
