@@ -3520,14 +3520,20 @@ ${userText}
                         // Capture current input state if available
                         const currentDraft = this.elements.writingInput ? this.elements.writingInput.value : (currentLibrary[idx].writingDraft || "");
 
-                        // We only update the lightweight fields here if needed for the list
-                        // The full content save happens via saveToFirestore's specialized library save logic
+                        // CRITICAL: Update the library item with the CURRENT ACTIVE STATE
+                        // This ensures that when we generate the index below, it uses the fresh data (like new quiz/writing)
+                        // even if we haven't formally saved it to the specific document yet.
                         currentLibrary[idx] = {
                             ...currentLibrary[idx],
-                            title: currentLibrary[idx].title, // Keep title
-                            lastOpened: currentLibrary[idx].lastOpened,
-                            isDone: currentLibrary[idx].isDone,
-                            // Content/Data fields are stripped from the main index payload below
+                            content: this.state.text,
+                            quizData: this.state.quizData,
+                            writingData: this.state.writingData,
+                            writingResult: this.state.writingResult,
+                            userAnswers: this.state.userAnswers,
+                            writingDraft: currentDraft,
+                            
+                            title: this.state.title, // Keep title in sync too
+                            lastOpened: new Date().toISOString() // Update last opened to now
                         };
                     }
                 }
@@ -3549,7 +3555,7 @@ ${userText}
                          // Calculate Quiz Stats (if loaded)
                          if (quizData && quizData.questions && Array.isArray(quizData.questions) && quizData.questions.length > 0) {
                             indexItem.hasQuiz = true;
-                            if (item.userAnswers) {
+                            if (item.userAnswers && Object.keys(item.userAnswers).length > 0) {
                                 let score = 0;
                                 const questions = quizData.questions;
                                 questions.forEach((q, idx) => {
