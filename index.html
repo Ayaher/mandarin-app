@@ -3218,14 +3218,29 @@ Return ONLY a JSON object with this structure:
                 const results = [];
                 for (let i = 0; i < this.state.dictionaryData.length; i++) {
                     const item = this.state.dictionaryData[i];
+                    const eng = item.english.toLowerCase();
+                    const simp = item.simplified;
+                    const py = item.pinyin.toLowerCase();
                     
-                    if (
-                        item.english.toLowerCase().includes(query) ||
-                        item.simplified.includes(query) ||
-                        item.pinyin.toLowerCase().includes(query)
-                    ) {
-                        results.push(item);
-                        if (results.length >= 30) break;
+                    if (eng.includes(query) || simp.includes(query) || py.includes(query)) {
+                        let score = 0;
+                        
+                        // Exact match priority
+                        if (simp === query || py === query || eng.split('; ').includes(query)) {
+                            score += 1000;
+                        } 
+                        // Starts with match priority
+                        else if (simp.startsWith(query) || py.startsWith(query) || eng.startsWith(query) || eng.includes('; ' + query)) {
+                            score += 500;
+                        }
+
+                        // Prefer words with fewer characters (more fundamental vocabulary)
+                        score -= simp.length * 50;
+                        
+                        // Prefer shorter English definitions (more concise/direct meaning)
+                        score -= item.english.length;
+
+                        results.push({ item, score });
                     }
                 }
 
@@ -3234,7 +3249,12 @@ Return ONLY a JSON object with this structure:
                     dictEmpty.classList.remove('hidden');
                 } else {
                     dictEmpty.classList.add('hidden');
-                    dictList.innerHTML = results.map(v => `
+                    
+                    // Sort descending by score, take top 30
+                    results.sort((a, b) => b.score - a.score);
+                    const topResults = results.slice(0, 30).map(r => r.item);
+
+                    dictList.innerHTML = topResults.map(v => `
                         <li onclick="app.copyToClipboard('${v.simplified}')" title="Click to copy '${v.simplified}'" class="flex flex-col pb-2 border-b border-blue-200/50 dark:border-blue-800/20 last:border-0 last:pb-0 cursor-pointer hover:bg-blue-100/50 dark:hover:bg-blue-900/30 rounded px-1 transition-colors select-none">
                             <div class="flex items-baseline gap-2 justify-between">
                                 <span class="font-bold text-gray-800 dark:text-gray-100 font-hanzi-sans text-base">${v.simplified}</span>
