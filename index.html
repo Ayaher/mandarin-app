@@ -3151,8 +3151,87 @@ Return ONLY a JSON object with this structure:
 
                     if (!this.state.dictionaryData) {
                         this.loadDictionary();
+                    } else {
+                        // Reset search if already loaded
+                        this.elements.dictSearch.value = '';
+                        this.elements.dictList.innerHTML = '';
+                        this.elements.dictEmpty.classList.add('hidden');
+                        this.elements.dictWelcome.classList.remove('hidden');
                     }
                 }
+            }
+
+            convertPinyinToAccents(pinyin) {
+                if (!pinyin) return pinyin;
+                
+                const toneMap = {
+                    'a': ['ā', 'á', 'ǎ', 'à'],
+                    'e': ['ē', 'é', 'ě', 'è'],
+                    'i': ['ī', 'í', 'ǐ', 'ì'],
+                    'o': ['ō', 'ó', 'ǒ', 'ò'],
+                    'u': ['ū', 'ú', 'ǔ', 'ù'],
+                    'v': ['ǖ', 'ǘ', 'ǚ', 'ǜ'],
+                    'ü': ['ǖ', 'ǘ', 'ǚ', 'ǜ']
+                };
+
+                return pinyin.split(' ').map(word => {
+                    const toneMatch = word.match(/(\d)$/);
+                    if (!toneMatch) return word;
+
+                    const tone = parseInt(toneMatch[1]);
+                    if (tone < 1 || tone > 4) return word.replace(/\d$/, '');
+
+                    const toneIndex = tone - 1;
+                    let letters = word.replace(/\d$/, '').replace(/v/g, 'ü');
+                    
+                    let vowelToMark = '';
+                    let markIndex = -1;
+
+                    if (letters.includes('a')) {
+                        vowelToMark = 'a';
+                        markIndex = letters.indexOf('a');
+                    } else if (letters.includes('e')) {
+                        vowelToMark = 'e';
+                        markIndex = letters.indexOf('e');
+                    } else if (letters.includes('ou')) {
+                        vowelToMark = 'o';
+                        markIndex = letters.indexOf('o');
+                    } else {
+                        const vowels = [];
+                        for (let i = 0; i < letters.length; i++) {
+                            if (/[iuüo]/.test(letters[i].toLowerCase())) {
+                                vowels.push({char: letters[i], index: i});
+                            }
+                        }
+                        if (vowels.length > 0) {
+                            if (vowels.length >= 2 && 
+                                ((vowels[vowels.length-2].char.toLowerCase() === 'i' && vowels[vowels.length-1].char.toLowerCase() === 'u') || 
+                                 (vowels[vowels.length-2].char.toLowerCase() === 'u' && vowels[vowels.length-1].char.toLowerCase() === 'i'))) {
+                                const v = vowels[vowels.length - 1];
+                                vowelToMark = v.char.toLowerCase();
+                                markIndex = v.index;
+                            } else {
+                                const oIndex = vowels.findIndex(v => v.char.toLowerCase() === 'o');
+                                if (oIndex !== -1) {
+                                    vowelToMark = 'o';
+                                    markIndex = vowels[oIndex].index;
+                                } else {
+                                    const v = vowels[vowels.length - 1];
+                                    vowelToMark = v.char.toLowerCase();
+                                    markIndex = v.index;
+                                }
+                            }
+                        }
+                    }
+
+                    if (markIndex !== -1 && toneMap[vowelToMark]) {
+                        const isUpper = letters[markIndex] === letters[markIndex].toUpperCase();
+                        const markedVowel = toneMap[vowelToMark][toneIndex];
+                        return letters.substring(0, markIndex) + (isUpper ? markedVowel.toUpperCase() : markedVowel) + letters.substring(markIndex + 1);
+                    }
+                    
+                    return letters;
+                }).join(' ');
             }
 
             async loadDictionary() {
@@ -3258,7 +3337,7 @@ Return ONLY a JSON object with this structure:
                         <li onclick="app.copyToClipboard('${v.simplified}')" title="Click to copy '${v.simplified}'" class="flex flex-col pb-2 border-b border-blue-200/50 dark:border-blue-800/20 last:border-0 last:pb-0 cursor-pointer hover:bg-blue-100/50 dark:hover:bg-blue-900/30 rounded px-1 transition-colors select-none">
                             <div class="flex items-baseline gap-2 justify-between">
                                 <span class="font-bold text-gray-800 dark:text-gray-100 font-hanzi-sans text-base">${v.simplified}</span>
-                                <span class="text-xs text-blue-600 dark:text-blue-400 font-medium">${v.pinyin}</span>
+                                <span class="text-xs text-blue-600 dark:text-blue-400 font-medium">${this.convertPinyinToAccents(v.pinyin)}</span>
                             </div>
                             <span class="text-xs text-gray-600 dark:text-gray-300 italic" title="${v.english}">${v.english}</span>
                         </li>
