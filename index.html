@@ -3292,6 +3292,11 @@ Return ONLY a JSON object with this structure:
                     this.state.isDictLoading = false;
                     this.elements.dictLoading.classList.add('hidden');
                     this.elements.dictLoading.classList.remove('flex');
+                    if (!this.elements.dictSearch.value.trim()) {
+                        this.elements.dictWelcome.classList.remove('hidden');
+                    } else {
+                        this.searchDictionary();
+                    }
                 }
             }
 
