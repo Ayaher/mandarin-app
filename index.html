@@ -1094,7 +1094,7 @@
                                                 <!-- Dict Search -->
                                                 <div class="mb-3 shrink-0 px-1 lg:px-0">
                                                     <div class="relative">
-                                                        <input type="text" id="dict-search" oninput="app.searchDictionary()" placeholder="Search English or Pinyin..." 
+                                                        <input type="text" id="dict-search" oninput="app.searchDictionary()" autocomplete="off" placeholder="Search English or Pinyin..." 
                                                             class="w-full pl-9 pr-3 py-2 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-pink-500/50 focus:border-pink-500/50 transition-colors placeholder-gray-400">
                                                         <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
                                                     </div>
@@ -3151,12 +3151,6 @@ Return ONLY a JSON object with this structure:
 
                     if (!this.state.dictionaryData) {
                         this.loadDictionary();
-                    } else {
-                        // Reset search if already loaded
-                        this.elements.dictSearch.value = '';
-                        this.elements.dictList.innerHTML = '';
-                        this.elements.dictEmpty.classList.add('hidden');
-                        this.elements.dictWelcome.classList.remove('hidden');
                     }
                 }
             }
