@@ -1074,8 +1074,11 @@
                                                 <div class="mb-3 shrink-0 px-1 lg:px-0">
                                                     <div class="relative">
                                                         <input type="text" id="vocab-filter" oninput="app.filterVocab()" placeholder="Search vocabulary..." 
-                                                            class="w-full pl-9 pr-3 py-2 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-pink-500/50 focus:border-pink-500/50 transition-colors placeholder-gray-400">
+                                                            class="w-full pl-9 pr-9 py-2 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-pink-500/50 focus:border-pink-500/50 transition-colors placeholder-gray-400">
                                                         <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                                                        <button onclick="app.clearVocabFilter()" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 focus:outline-none hidden" id="vocab-clear-btn">
+                                                            <i data-lucide="x" class="w-4 h-4"></i>
+                                                        </button>
                                                     </div>
                                                 </div>
 
@@ -1095,8 +1098,11 @@
                                                 <div class="mb-3 shrink-0 px-1 lg:px-0">
                                                     <div class="relative">
                                                         <input type="text" id="dict-search" oninput="app.searchDictionary()" autocomplete="off" placeholder="Search English or Pinyin..." 
-                                                            class="w-full pl-9 pr-3 py-2 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-pink-500/50 focus:border-pink-500/50 transition-colors placeholder-gray-400">
+                                                            class="w-full pl-9 pr-9 py-2 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-pink-500/50 focus:border-pink-500/50 transition-colors placeholder-gray-400">
                                                         <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                                                        <button onclick="app.clearDictSearch()" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 focus:outline-none hidden" id="dict-clear-btn">
+                                                            <i data-lucide="x" class="w-4 h-4"></i>
+                                                        </button>
                                                     </div>
                                                 </div>
 
@@ -3100,7 +3106,16 @@ Return ONLY a JSON object with this structure:
             }
 
             filterVocab() {
-                const query = document.getElementById('vocab-filter').value.toLowerCase();
+                const input = document.getElementById('vocab-filter');
+                const clearBtn = document.getElementById('vocab-clear-btn');
+                const query = input.value.toLowerCase();
+                
+                if (query.length > 0) {
+                    clearBtn.classList.remove('hidden');
+                } else {
+                    clearBtn.classList.add('hidden');
+                }
+
                 const items = document.querySelectorAll('.vocab-item');
                 items.forEach(item => {
                     const text = item.getAttribute('data-vocab');
@@ -3112,6 +3127,15 @@ Return ONLY a JSON object with this structure:
                         item.classList.remove('flex');
                     }
                 });
+            }
+
+            clearVocabFilter() {
+                const input = document.getElementById('vocab-filter');
+                if (input) {
+                    input.value = '';
+                    this.filterVocab();
+                    input.focus();
+                }
             }
 
             setVocabTab(tab) {
@@ -3272,8 +3296,16 @@ Return ONLY a JSON object with this structure:
             }
 
             searchDictionary() {
-                const query = this.elements.dictSearch.value.trim().toLowerCase();
+                const input = this.elements.dictSearch;
+                const clearBtn = document.getElementById('dict-clear-btn');
+                const query = input.value.trim().toLowerCase();
                 const { dictList, dictEmpty, dictWelcome, dictLoading } = this.elements;
+
+                if (query.length > 0) {
+                    clearBtn.classList.remove('hidden');
+                } else {
+                    clearBtn.classList.add('hidden');
+                }
 
                 if (!query) {
                     dictList.innerHTML = '';
@@ -3355,6 +3387,14 @@ Return ONLY a JSON object with this structure:
                     }, 1000);
                 } catch (err) {
                     console.error('Failed to copy!', err);
+                }
+            }
+
+            clearDictSearch() {
+                if (this.elements.dictSearch) {
+                    this.elements.dictSearch.value = '';
+                    this.searchDictionary();
+                    this.elements.dictSearch.focus();
                 }
             }
 
