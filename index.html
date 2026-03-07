@@ -4333,6 +4333,13 @@ ${userText}
                              indexItem.hasWriting = false;
                         }
 
+                        // Remove any undefined properties from indexItem
+                        Object.keys(indexItem).forEach(key => {
+                            if (indexItem[key] === undefined) {
+                                delete indexItem[key];
+                            }
+                        });
+
                         newLibraryIndex.push(indexItem);
                         // Construct full library object for local state update
                         // Ensure we don't accidentally mark it as unloaded if we have full data here
@@ -4437,6 +4444,13 @@ ${userText}
                             // Remove internal flags before saving
                             delete payload.isLoaded;
                             delete payload.preview;
+
+                            // Remove any undefined properties to prevent Firebase errors
+                            Object.keys(payload).forEach(key => {
+                                if (payload[key] === undefined) {
+                                    delete payload[key];
+                                }
+                            });
 
                             await setDoc(doc(this.db, "users", uid, "library", item.id), payload, { merge: true });
                         }
